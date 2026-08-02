@@ -1,0 +1,60 @@
+# Q2 availability-conditioned robustness — stress and cliff mapping (READY).
+# Measured forward passes on the frozen base checkpoint; NO training, NO model
+# download, NO second checkpoint. Follows docs/Q2_PROTOCOL.md (frozen). The
+# CLI subcommands (measure/analyze/plot-q2-*) are NOT yet implemented; this
+# file freezes the experiment definition until implementation is authorized.
+#
+# Prerequisite: Q1 (STOP universal) + Q1-B (GO null-drop tail) accepted.
+# Strategy: null-drop only; renormalize remains dropped. Three arms reusing
+# the Q1-B machinery: cross-domain (A), decode compounding (B), cliff (C).
+run_id = "q1-quality-erasure"
+run_dir = "artifacts/runs/q1-quality-erasure"
+seed = 7
+
+# Arm A: cross-domain tolerance — repeat the Q1-B depth sweep on other domains.
+[q2_cross_domain_probe]
+output_dir = "artifacts/runs/q1-quality-erasure/analysis/q2_cross_domain"
+policy = "null"
+positioning = "mass_omission"
+incidence = 0.009                 # AX4 anchor
+depth_run_lengths = [1, 2, 4, 8]  # AX4 worst case = 8
+experts_per_drop = 1
+# One or more additional domains materialized from local data (code and/or
+# math/reasoning); the Q1-B WikiText-2 values are the in-family reference.
+domains = ["ref_wikitext2", "code", "math"]
+
+# Arm B: decode compounding — larger autoregressive continuation under the tail.
+[q2_decode_probe]
+output_dir = "artifacts/runs/q1-quality-erasure/analysis/q2_decode"
+policy = "null"
+positioning = "mass_omission"
+incidence = 0.009
+experts_per_drop = 1
+run_lengths = [1, 8]              # free single-drop and AX4 worst case
+max_new_tokens = 64               # enough steps to expose compounding
+prefix_tokens = 64
+
+# Arm C: cliff mapping — push erasure past AX4's bound to locate the cliff.
+[q2_cliff_probe]
+output_dir = "artifacts/runs/q1-quality-erasure/analysis/q2_cliff"
+policy = "null"
+positioning = "mass_omission"
+incidence = 0.009
+experts_per_drop = 1
+# Incidence beyond AX4's ~0.9%: toward the universal mass-budget neighborhood.
+incidence_sweep = [0.009, 0.02, 0.05, 0.1, 0.3, 0.5]
+# Runs beyond the AX4 8-layer cap.
+run_length_sweep = [8, 12, 16]
+# Multiple experts dropped per layer, past the single low-mass expert.
+experts_per_layer_sweep = [1, 2, 4]
+# Response-surface reporting threshold marking the "free" band.
+free_band_max_kl = 0.02           # conditional-on-affected nats
+
+# Shared frozen quality readouts.
+[quality_readouts]
+mean_forward_kl = true
+top1_agreement = true
+perplexity_ratio = true
+large_divergence_kl = 2.0
+large_divergence_max_fraction = 0.01
+monotone_slack = 1e-6

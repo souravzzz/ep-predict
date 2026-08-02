@@ -1,15 +1,18 @@
 # Next experiments: first-order co-design and predictable routing
 
 **Updated:** 2026-08-02  
-**Current next action:** run Q1, the expert-erasure quality probe (frozen
-protocol in [Q1_PROTOCOL.md](Q1_PROTOCOL.md)); measure whether quality loss is
-controlled by missing routed mass before any AX4 robustness-training is
-authorized
+**Current next action:** run Q2's three measured stress arms (cross-domain,
+decode compounding, cliff mapping) on the frozen base checkpoint once
+implementation is authorized — Q1 (universal STOP) and Q1-B (null-drop tail
+GO) are complete and accepted. See
+[Q2_PROTOCOL.md](Q2_PROTOCOL.md) and
+[Q1B_PROTOCOL.md](Q1B_PROTOCOL.md).
 **Operating rule:** use the cheapest existing artifacts first; model broad
 viability and expected benefit before improving timing fidelity or predictors.
-After AX4, the decisive open question is whether low-mass deadline-induced
-omissions are semantically cheap — Q1 measures that on the frozen model before
-any training.
+Q1-B showed the frozen model already tolerates the AX4 null-drop tail for
+free (prefill, one domain); Q2 verifies that tolerance across the untested
+axes and locates the quality cliff, so any AX4 robustness-training is
+justified only by a demonstrated non-free regime.
 
 This plan now separates four questions:
 
@@ -47,7 +50,7 @@ OLMoE or the fixed H3 predictor achieves those points. The frozen design is in
 | AX4 | Can hard-deadline expert erasure produce a tight low-batch TPOT bound with a plausible quality-robustness contract? | No for completed replay; later training requires permission | Complete; analytical gate passes only in a high-bandwidth mass-priority regime, review pending |
 | Q1 | Does the frozen model tolerate the expert erasure AX4's deadline contract relies on? Is quality loss controlled by missing routed mass? | Yes; forward passes on frozen base model, no training | Measured; universal mass-budget headline STOPS (KL 5.81), tail sub-track is far milder (see EXPERIMENT_LOG) |
 | Q1B | Under null-drop, is quality loss additive and controlled in the number and placement of dropped expert-layers (depth, layer order, spacing, cross-token leak)? | Yes; forward passes on frozen base model, no training | **Measured; GO** (figure review pending) |
-| Q2 | Can availability-conditioned robustness training make the model tolerate the AX4 erasure distribution without harming loss/load balance? | Yes; small intervention | Deferred; gated on Q1/Q1B |
+| Q2 | Does availability-conditioned robustness make the model tolerate the AX4 erasure distribution (and if not, where)? | Measured stress arms (cross-domain, decode compounding, cliff mapping); no training in the probe | **Ready** (protocol + config frozen); CLI implementation pending |
 | H5-A | What prediction × hardware combinations create a first-order profitability window? | No | Complete; region exists |
 | H5-B | What minimum predictor quality is required at each capacity, bandwidth, and lookahead? | No; derived from H5-A | Complete |
 | H5-C | How much analytical oracle benefit do the existing transition and linear streams recover? | No retraining; reconstruct existing predictions | Complete; raw streams fail traffic gate |
@@ -245,16 +248,43 @@ that tolerance directly on the frozen base checkpoint.
 4. Human visual review, then decide GO (proceed to Q2 robustness-training) or
    STOP (AX4's training justification dies).
 
-## Q2 — Availability-conditioned robustness training (deferred)
+## Q2 — Availability-conditioned robustness: stress and cliff mapping (ready)
 
-**Gated on Q1 GO.** Only if the frozen model tolerates the AX4 erasure
-distribution should a minimal intervention train a small fallback/calibration
-mechanism (mask-aware renormalization, small shared fallback expert, or a
-low-rank adapter) against the actual availability-mask distribution produced by
-the target hierarchy and deadline policy. Measure the Pareto tuple
-(validation loss, load balance, quality under the AX4 erasure distribution,
-modeled TPOT benefit). Generic expert-dropout robustness is explicitly not the
-target; only the trace/mass-derived distribution counts.
+**Frozen protocol:** `docs/Q2_PROTOCOL.md`; config
+`configs/experiment/q2-stress.toml`. **Status:** ready — protocol and config
+frozen; CLI implementation and execution not yet authorized.
+
+Q1-B showed the frozen model already tolerates the AX4 null-drop tail
+essentially **for free** (monotone-additive depth cost, worst case L=8
+conditional KL 0.013, zero large divergence, layer-uniform, no leak) — but only
+in the measured regime (prefill, single domain, bounded erasure). Q2 is
+therefore reframed from "teach it to tolerate erasure" to:
+
+> verify the measured free tolerance survives the untested axes, and locate
+> the quality cliff; train only where a real degradation is demonstrated, and
+> only the smallest mask-aware calibration.
+
+Three measured, **non-training** stress arms (all quality-only, frozen
+checkpoint, no model download):
+
+1. **Q2-A cross-domain:** repeat the Q1-B depth sweep on additional domains
+   (code, math); gate = the depth-additive tolerance holds per domain.
+2. **Q2-B decode compounding:** a larger autoregressive continuation under the
+   AX4 tail; gate = erased continuation stays coherent (no runaway divergence).
+3. **Q2-C cliff mapping:** push erasure past AX4's bound (higher incidence,
+   L>8, multi-experts) to locate where null-drop stops being free and how
+   steep the cliff is.
+
+The gated training sub-step is unchanged in spirit but explicitly minimal and
+edge-triggered: only if an arm demonstrates a real non-free regime, train a
+small mask-aware fallback/calibration (mask-aware renormalization — the better
+version of the naive renormalize already rejected — a tiny always-resident
+shared/fallback expert, or a low-rank adapter) against the measured
+mask/mass distribution; hold validation loss and load balance; report the
+Pareto tuple (validation loss, load balance, quality under the AX4 erasure
+distribution, modeled TPOT benefit). Generic expert-dropout robustness is
+explicitly not the target. If no arm fails, Q2 closes as a documented no-op:
+AX4's benefit is realized with zero training cost.
 
 ## H5-A — Controlled prediction × hardware sweep
 

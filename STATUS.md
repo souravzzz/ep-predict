@@ -1,18 +1,20 @@
 # Project status
 
-**Current focus:** Q1-B — the null-drop mechanism probe: is the frozen model's
-quality cost from bounded expert erasure additive and monotone in the number
-and placement of dropped expert-layers (the additive-residual hypothesis AX4's
-bounded-run contract and Q2's training target rely on)?
-**Current stage:** Q1-B measured and **GO** on the frozen gate. On the frozen
-base model under null-drop (one expert per degraded layer, same affected
-sample, AX4 anchor incidence 0.009, conditional on affected tokens), quality
-cost is monotone and roughly additive in depth L=1→8 (KL 0.0041→0.0133), with
-flat per-layer marginal (ratio 1.20, gate ≤3), zero large divergence at the
-AX4 worst case L=8, layer-uniform sensitivity (~1.6× spread), no reconstruction
-benefit from spacing, and no meaningful cross-token leak (downstream ≈ far
-control). The measured closeout (tests, audit, figures, log) is done; human
-figure review and the Q2 robustness-training decision remain.
+**Current focus:** Q2 — availability-conditioned robustness, stress and cliff
+mapping (protocol frozen, **ready**): verify that the measured free
+null-drop tolerance survives the axes Q1-B could not measure (cross-domain,
+decode compounding, contract-violation boundary), and locate the cliff; train
+a minimal mask-aware calibration only where a real degradation is demonstrated.
+**Current stage:** Q1/Q1-B accepted by the researcher. The universal
+mass-budget probe is a decisive STOP (KL 5.81); the AX4-faithful **null-drop**
+tail is a decisive **GO** — quality cost is monotone and roughly additive in
+depth L=1→8 (worst case 0.013 nats conditional KL), with zero large divergence,
+layer-uniform sensitivity, no spacing benefit, and no cross-token leak. The
+model already tolerates the AX4 tail essentially for free (prefill, one
+domain). Q2 is set up as three measured, non-training stress arms
+(cross-domain, decode compounding, cliff mapping) with the protocol and config
+frozen; a gated, minimal mask-aware training sub-step is defined but not
+authorized.
 **Last updated:** 2026-08-02
 
 | Gate | Question | State | Exit evidence |
@@ -30,9 +32,9 @@ figure review and the Q2 robustness-training decision remain.
 | H7 | Can routing be made more predictable without harming loss or balance? | Deferred after H6 failure | Requires a new mechanism and explicit permission |
 | C0 | Does post-training materially change matched-token trajectory predictability? | Pilot not supported; review pending | Base/Instruct retain 89.7% of selections; layer-0→15 conditional-gain change is +1.6 pp versus a 5 pp gate |
 | C1 | Does the result transfer to a top-1/top-2 checkpoint? | Deferred; explicit permission required | No model download or testbed change authorized |
-| Q1 | Does the frozen model tolerate the expert erasure AX4's deadline contract relies on? Is quality loss controlled by missing routed mass? | STOP (universal) / tail STOP-unclear (measured); figure review pending | Universal mass-budget headline (renormalize, m=0.125): KL 5.81, top-1 9.2%, PPL 279.9, non-monotone. Tail-event sub-track (rare one-expert one-layer drops): unmonotone, no kill; conditional-on-affected KL 0.128/top-1 86%/PPL 1.13 under renormalize, but null-drop is near-free (KL 0.0032, top-1 99.2%) |
-| Q1B | Under null-drop, is quality loss additive and monotone in the number/placement of dropped expert-layers (depth, layer order, spacing, cross-token leak)? | **GO; measured** (figure review pending) | Depth sweep L=1→8 conditional-on-affected: monotone (KL 0.0041→0.0133), flat per-layer marginal (ratio 1.20 ≤3), 0% large divergence at L=8; layer-uniform, spacing-insensitive, no cross-token leak |
-| Q2 | Can availability-conditioned robustness training make the model tolerate the AX4 erasure distribution? | Deferred; gated on Q1/Q1B | Minimal fallback/calibration intervention, not generic dropout |
+| Q1 | Does the frozen model tolerate the expert erasure AX4's deadline contract relies on? Is quality loss controlled by missing routed mass? | **STOP (universal) / near-free null-drop tail; accepted by researcher** | Universal mass-budget headline (renormalize, m=0.125): KL 5.81, top-1 9.2%, PPL 279.9, non-monotone. Tail-event sub-track (rare one-expert one-layer drops): null-drop near-free (conditional KL 0.0032, top-1 99.2%); renormalize ~40× worse and dropped as a strategy |
+| Q1B | Under null-drop, is quality loss additive and monotone in the number/placement of dropped expert-layers (depth, layer order, spacing, cross-token leak)? | **GO; accepted by researcher** | Depth sweep L=1→8 conditional-on-affected: monotone (KL 0.0041→0.0133), flat per-layer marginal (ratio 1.20 ≤3), 0% large divergence at L=8; layer-uniform, spacing-insensitive, no cross-token leak. Additive-residual mechanism supported |
+| Q2 | Does availability-conditioned robustness make the model tolerate the AX4 erasure distribution (and if not, where)? | **Ready** (protocol + config frozen; no CLI yet) | Three measured stress arms reusing Q1-B machinery: cross-domain, decode compounding, cliff mapping; gated minimal mask-aware calibration, not generic dropout |
 | AX1 | Under assumed future MTP-style routing quality, what capacity/TPOT envelope does predictive offload enable? | Projected region exists; review pending | At measured PCIe and assumed C=99%, A=1.5×, wave-local P99 improves 34–39% versus reactive offload; FCFS queue tails are materially worse |
 | AX2 | What bandwidth, latency, reliability, amplification, and granularity bounds define viable regions? | Complete; review pending | K=16, A=1× needs 71.3/22.8/11.6/8.2 GB/s at Δ=1/3/6/9; reliability remains orthogonal |
 | AX3 | What HBM and rolling-SRAM organization suits a three-tier predictive hierarchy? | Physical staging envelope complete; review pending | Top-8 whole-expert double buffering needs 192 MiB at A=1× and 384 MiB at A=2×; no SRAM execution speedup is claimed |
@@ -46,10 +48,9 @@ figure review and the Q2 robustness-training decision remain.
 - [x] Materialize WikiText-2 paired clean-vs-erased tables, apply the frozen
       Q1 gate, and generate the `ΔQ vs m_missing` curve + positioning/correlation
       panel with hashed inputs.
-- [ ] Human review the Q1 figures (fig1/fig2 for the mass-budget probe and
-      fig_tail for the tail sub-track; `human_review_complete` still `false`;
-      the CLI model has no vision) before deciding GO (proceed to Q2
-      robustness training) or STOP (AX4's training justification dies).
+- [x] Human reviewed the Q1 figures (fig1/fig2 mass-budget + fig_tail
+      sub-track) and accepted the result: universal erasure STOPS; the
+      AX4-faithful null-drop tail is near-free.
 - [x] Add the AX4-faithful tail-event sub-track: rare one-expert one-layer
       drops swept by incidence and consecutive-layer run length, conditional
       on the affected tokens (CLI `measure/analyze/plot-q1-tail`).
@@ -60,9 +61,16 @@ figure review and the Q2 robustness-training decision remain.
       shared cell seed), measure/analyze/plot subcommands, config, and tests.
 - [x] Execute Q1-B on the frozen base checkpoint and apply the frozen gate
       (depth additivity L=1→8 at AX4 anchor, conditional-on-affected): **GO**.
-- [ ] Human review the Q1-B figures (fig1 depth additivity + fig2 mechanism)
-      before deciding the Q2 availability-conditioned robustness-training
-      target.
+- [x] Human reviewed the Q1-B figures (fig1 depth additivity + fig2 mechanism)
+      and accepted the result; the Q1-B additive-residual mechanism is closed.
+- [x] Freeze the Q2 protocol and config (docs/Q2_PROTOCOL.md,
+      configs/experiment/q2-stress.toml), reframed to verify the measured free
+      null-drop tolerance across the untested axes.
+- [ ] Implement and run the Q2 stress arms (cross-domain, decode compounding,
+      cliff mapping) on the frozen base checkpoint once authorized.
+- [ ] Decide Q2 from the stress arms: GO-to-AX4 with zero training (tolerance
+      holds) vs a gated minimal mask-aware calibration (a narrow non-free
+      regime) vs a harder AX4 ceiling (cliff inside the contract margin).
 - [ ] Confirm the actual machine exposes the intended 24 GB NVIDIA GPU.
 - [x] Install the `data` and `inference` dependency groups.
 - [x] Materialize and review the revision-pinned standard-small workload.
@@ -183,7 +191,9 @@ figure review and the Q2 robustness-training decision remain.
       erasure-robustness target before any training or new-model work.
 
 Full plan: [docs/NEXT_EXPERIMENTS.md](docs/NEXT_EXPERIMENTS.md).
-Active protocol: [docs/Q1_PROTOCOL.md](docs/Q1_PROTOCOL.md).
+Active protocol: [docs/Q2_PROTOCOL.md](docs/Q2_PROTOCOL.md).
+Prior probe: [docs/Q1_PROTOCOL.md](docs/Q1_PROTOCOL.md).
+Q1-B mechanism probe: [docs/Q1B_PROTOCOL.md](docs/Q1B_PROTOCOL.md).
 Prior result: [docs/H4_RESULTS.md](docs/H4_RESULTS.md).
 Architecture protocol:
 [docs/ARCHITECTURE_EXPLORATION_PROTOCOL.md](docs/ARCHITECTURE_EXPLORATION_PROTOCOL.md).

@@ -568,3 +568,21 @@ On the frozen base model, is null-drop quality loss controlled by the *number an
 - **Scheduler/hardware:** layer-uniform and spacing-insensitive means no layer must be specially guarded and no reconstruction-window scheduling is required by quality — though it remains a latency/runtime concern.
 - Evidence boundary: single frozen revision, single domain (WikiText-2), prefill scope, 186 affected tokens at the anchor. All derived products under `artifacts/runs/q1-quality-erasure/analysis/q1b_null/`.
 - One next action: human visual review of `fig1_q1b_depth_additivity` + `fig2_q1b_mechanism`, then hand off to Q2 robustness-training decision.
+
+## Q1 / Q1-B accepted; Q2 set up (ready)
+
+**Date:** 2026-08-02
+- Researcher accepted the Q1 result (universal mass-budget **STOP**, KL 5.81)
+  and the Q1-B null-drop mechanism result (**GO**): on the frozen base model,
+  null-drop quality cost under the AX4 tail is monotone and roughly additive in
+  depth (worst case L=8 conditional-on-affected KL 0.013, zero large
+  divergence), layer-uniform, spacing-insensitive, and local — the model
+  tolerates the AX4 erasure distribution essentially for free in the measured
+  (prefill, single-domain) regime. Renormalize is dropped as a strategy.
+- Q2 is reframed from "make the model tolerate erasure" to "verify and bound
+  the measured free tolerance": three measured, **non-training** stress arms
+  (cross-domain, decode compounding, cliff mapping) reuse the Q1-B machinery,
+  with a gated minimal mask-aware calibration defined only if a real non-free
+  regime is demonstrated. Protocol and config are frozen
+  (`docs/Q2_PROTOCOL.md`, `configs/experiment/q2-stress.toml`); CLI
+  implementation and execution remain unauthorized.

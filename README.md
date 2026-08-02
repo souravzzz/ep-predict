@@ -71,6 +71,19 @@ target, not evidence that current OLMoE preserves quality under erasure. See
 the [protocol](docs/DEADLINE_DEGRADATION_PROTOCOL.md) and
 [AX4 report](artifacts/runs/h1-standard-small/analysis/ax4_deadline_degradation/REPORT.md).
 
+Q1 then measured that erasure cost directly on the frozen base checkpoint.
+Universal every-layer erasure is catastrophic (KL 5.81, STOP), but the
+AX4-faithful tail regime under the model's native **null-drop** is nearly free.
+Q1-B mapped the mechanism: quality cost is monotone and roughly additive in the
+number of dropped expert-layers (worst case L=8 is 0.013 nats conditional KL,
+zero large divergence), layer-uniform, spacing-insensitive, and local — direct
+support for the additive-residual hypothesis, and the first point where AX4's
+bounded-run quality contract is *measured* rather than assumed. Q2 (ready)
+verifies that tolerance across the untested axes (cross-domain, decode
+compounding, cliff mapping) and only then considers a minimal mask-aware
+calibration. See [docs/Q2_PROTOCOL.md](docs/Q2_PROTOCOL.md) and the
+[Q1-B report](artifacts/runs/q1-quality-erasure/analysis/q1b_null/NULL_REPORT.md).
+
 The active experiment queue, insight-mining questions, and visualization
 deliverables are in
 [docs/NEXT_EXPERIMENTS.md](docs/NEXT_EXPERIMENTS.md).

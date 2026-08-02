@@ -2,7 +2,7 @@
 
 ## Founding Research PRD
 
-**Status:** H1–H6 and C0 empirical pilot complete; AX1–AX4 analytical architecture track complete, AX4 human review pending
+**Status:** H1–H6 and C0 empirical pilot complete; AX1–AX4 analytical architecture track complete (AX4 review pending); Q1/Q1-B expert-erasure quality probe complete and accepted; Q2 stress arms ready
 **Primary environment:** Python 3.12, `uv`, PyTorch, Hugging Face Transformers, CUDA 12.4  
 **Initial hardware:** 1× NVIDIA GPU with 24 GB VRAM  
 **Planned scale-up environment:** 8× AMD MI355X-class GPUs with 288 GB HBM per GPU  
@@ -612,6 +612,46 @@ See
 [docs/DEADLINE_DEGRADATION_PROTOCOL.md](docs/DEADLINE_DEGRADATION_PROTOCOL.md)
 for definitions, gates, low-batch/large-model projections, and the
 deadline-elastic hardware proposal.
+
+### Q1 / Q1-B: does the frozen model tolerate the erasure AX4 relies on?
+
+Q1 measured quality versus missing routed mass directly on the frozen base
+checkpoint (forward passes only). Two regimes:
+
+- **Universal mass-budget erasure** (every token, every layer) is
+  catastrophic regardless of policy: the renormalize headline cell
+  (m=0.125) gives KL 5.81, top-1 9.2%, PPL 279.9. This is a **STOP** for any
+  mechanism that drops mass routinely.
+- **AX4-faithful tail erasure** (rare ~0.9% of tokens, bounded run of
+  layers) is far less destructive — and under the model's native **null-drop**
+  (no renormalization) a single one-expert one-layer drop is nearly free
+  (conditional KL 0.0032, top-1 99.2%). Renormalization is ~40× worse at
+  equal mass and theoretically wrong (it rescales survivors, amplifying the
+  removed mass), so it is dropped as a strategy.
+
+**Q1-B** then mapped the null-drop mechanism. On the frozen base model,
+conditional-on-affected quality cost is **monotone and roughly additive in
+the number of dropped expert-layers**: worst case L=8 is 0.013 nats KL with
+zero large divergences; per-layer marginal is flat (last/first ratio 1.20);
+sensitivity is **layer-uniform** (~1.6× spread across all 16 layers); spacing
+the drops confers no reconstruction benefit; and damage does not leak to other
+tokens (downstream ≈ far control). This is direct evidence for the
+**additive-residual mechanism** — each routed expert adds a mostly independent
+weighted update to the residual stream, so removing one per layer removes a
+small independent increment.
+
+**Interpretation:** the AX4 bounded-run quality contract is *measured*, not
+assumed, and is cheap: even the worst case (8 consecutive degraded layers)
+is semantically negligible. See `docs/Q1B_PROTOCOL.md` and
+`artifacts/runs/q1-quality-erasure/analysis/q1b_null/NULL_REPORT.md`.
+
+**Q2 (ready):** because the frozen model already tolerates the AX4 null-drop
+tail for free in the measured regime (prefill, one domain), robust training is
+no longer an unconditional requirement. Q2 verifies that tolerance across the
+untested axes and locates the cliff: three measured, non-training stress arms
+(cross-domain, decode compounding, cliff mapping) reuse the Q1-B machinery, and
+a gated minimal mask-aware calibration (not generic dropout) is defined only if
+a real non-free regime appears. See `docs/Q2_PROTOCOL.md`.
 
 ---
 

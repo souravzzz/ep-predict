@@ -17,8 +17,9 @@ Update it only when at least one of the following occurs:
 Routine metrics, commands, implementation changes, and transient next steps
 belong in `EXPERIMENT_LOG.md`, `STATUS.md`, and the per-hypothesis reports.
 
-**Evidence snapshot:** 2026-08-01, after H1–H6, the all-layer H2/H3 scan, and
-the C0 Base–Instruct matched-token comparison.
+**Evidence snapshot:** 2026-08-02, after H1–H6, the all-layer H2/H3 scan, the
+C0 Base–Instruct matched-token comparison, and the Q1/Q1-B expert-erasure
+quality probe.
 
 ---
 
@@ -175,6 +176,46 @@ established primarily during pretraining and survives later behavioral
 alignment. Post-training edits a pretrained computational scaffold rather
 than creating trajectory predictability from scratch. This remains
 `single-family`: it is not evidence across MoE architectures.
+
+### Erasure cost is mass-controlled and, under null-drop, additive in depth
+
+Q1 measured quality versus missing routed mass directly on the frozen base
+checkpoint (paired prefill forward passes):
+
+- **Universal mass-budget erasure is catastrophic** regardless of policy. The
+  renormalize headline cell (m=0.125) gives forward KL 5.81, top-1 9.2%, and
+  PPL 279.9. Removing routed mass *routinely* always breaks the model.
+- **Rare tail erasure is nearly free under the model's native null-drop.** A
+  single one-expert one-layer drop on ~0.9% of tokens gives conditional KL
+  ~0.003, top-1 99.2%. Renormalization is ~40× worse at equal mass and
+  theoretically wrong (it rescales survivors, amplifying the very mass it
+  removed), so it is dropped as a strategy.
+
+Q1-B mapped the null-drop mechanism across depth, layer order, spacing, and
+cross-token leak (same affected-token samples, conditional-on-affected):
+
+| L | affected KL | top-1 | large-div frac |
+|---:|---:|---:|---:|
+| 1 | 0.0041 | 97.9% | 0 |
+| 2 | 0.0053 | 96.2% | 0 |
+| 4 | 0.0073 | 98.4% | 0 |
+| 8 | 0.0133 | 93.6% | 0 |
+
+- **Monotone and roughly additive in depth:** worst case L=8 is 0.013 nats
+  conditional KL; per-layer marginal is flat (last/first ratio 1.20, gate ≤3);
+  zero KL≥2 events at any depth.
+- **Layer-uniform:** single-layer sensitivity spans only ~1.6× across all 16
+  layers (0.0017–0.0027 nats) — no lynchpin layer.
+- **Spacing-insensitive:** no reconstruction benefit from spreading drops; at
+  L=4 spaced is even slightly worse. Independent contributions, not emergent
+  depth compounding.
+- **Local:** cross-token leak at downstream offsets ≈ far control (~0.0017
+  nats); no propagating, distance-growing damage.
+
+This is direct evidence for the **additive-residual mechanism**: each routed
+expert adds a mostly independent weighted update to the residual stream, so
+removing one per layer removes a small independent increment and cost scales
+~linearly in the number of dropped expert-layers.
 
 ---
 
@@ -415,6 +456,30 @@ the future event that consumes the managed resource. A depth trajectory can
 schedule within-token transfers; cache retention needs cross-token reuse;
 replication needs cross-request or cross-device demand. These tasks may share
 features, but one cannot be substituted for another without evidence.
+
+### 17. Erasure cost is a measurable, additive distortion budget — not a binary yes/no
+
+Q1/Q1-B replace the vague "does the model tolerate missing experts?" with a
+measured, mechanism-ordered curve. On the frozen base model the answer is
+**regime-dependent**: universal mass erasure is catastrophic (KL 5.81), but
+rarer null-drop erasure is monotone-additive, layer-uniform, and local, with
+worst-case L=8 cost ~0.013 nats — semantically negligible. This matters in
+three ways:
+
+1. **It is the AX4 contract made measured.** The deadline-erasure hardware
+   proposal (already in this document) turns a synchronization failure into a
+   distortion budget \(m=\sum_{i\in M}a_i\); Q1-B now prices that budget
+   empirically for the tail regime rather than assuming robustness.
+2. **Training is not automatically the answer.** If the model already tolerates
+   the target erasure distribution, robustness training adds cost and risk with
+   no measured benefit. The honest default is a **non-training stress probe**
+   first (the untested axes: cross-domain, decode compounding, contract
+   boundaries), and a minimal mask-aware calibration only where a real non-free
+   regime appears.
+3. **The additive-residual mechanism gives a scaling law.** Cost ≈ (number of
+   dropped expert-layers) × a small, layer-uniform constant, with no compounding
+   blow-up — a concrete, testable property a training target or scheduler can
+   be designed against.
 
 ---
 
@@ -721,6 +786,13 @@ contract, but it is not a literal description of current OLMoE execution.
   K=8/16 pass at 256 GB/s and K=32 passes at 128 GB/s.
 - The same AX4 replay rejects measured PCIe for this mechanism: P99 normalized
   missing mass is 100%/100%/81% at K=8/16/32.
+- Under rare tail erasure on the frozen base checkpoint, **null-drop** quality
+  cost is monotone and roughly additive in the number of dropped expert-layers:
+  worst case L=8 is 0.013 nats conditional-on-affected KL with zero large
+  divergence, layer-uniform sensitivity, no spacing benefit, and no cross-token
+  leak (prefill, single domain). Universal mass-budget erasure is catastrophic
+  (KL 5.81). Renormalization is ~40× worse than null at equal mass and is
+  dropped as a strategy.
 
 ### Plausible architectural inference
 
@@ -750,8 +822,11 @@ contract, but it is not a literal description of current OLMoE execution.
 - The base model learned to manage hardware resources.
 - Making routing more predictable would preserve model loss and load balance.
 - Whole-expert movement beats activation movement or additional local memory.
-- Current OLMoE preserves loss, perplexity, or downstream quality under expert
-  erasure, renormalization, or shared-residual substitution.
+- The null-drop tail tolerance holds beyond the measured regime: across other
+  domains, under autoregressive decode compounding, or past AX4's
+  incidence/run-length/multi-expert boundary (the Q2 stress arms test this).
+- Renormalization or shared-residual substitution preserves quality as well as
+  null-drop does.
 - A future availability-trained model can meet the AX4 ≤20% P99 missing-mass
   contract without harming exact-mode quality or load balance.
 
@@ -827,3 +902,11 @@ central trajectory result.
   mass-priority 128–256 GB/s FCFS regime, and established that a hard latency
   bound, service capacity, and erasure robustness are three separate
   requirements.
+- **2026-08-02:** Q1/Q1-B priced the AX4 erasure budget empirically on the
+  frozen base model. Universal mass-budget erasure is catastrophic (KL 5.81);
+  rare tail erasure under null-drop is monotone-additive and semantically
+  near-free (worst L=8 0.013 nats), layer-uniform and local. This supports the
+  additive-residual mechanism, moves AX4's bounded-run contract from assumed
+  to *measured*, and reframes Q2 as a non-training stress probe (cross-domain,
+  decode compounding, cliff mapping) with a gated minimal mask-aware
+  calibration rather than an unconditional robustness-training requirement.
