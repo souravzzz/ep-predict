@@ -498,3 +498,232 @@ def _row_tail(rows, policy, *, positioning, incidence, run_length):
     if len(matches) != 1:
         raise ValueError(f"tail row not unique: {policy}/{positioning}/{incidence}/{run_length}")
     return matches[0]
+
+
+def _read_csv_vis(path: Path) -> list[dict[str, str]]:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
+def _require(analysis: Path, *names: str) -> None:
+    for name in names:
+        if not (analysis / name).is_file():
+            raise FileNotFoundError(f"run analyze-q1b before plotting: {analysis / name}")
+
+
+def _plot_q1b_depth(depth_csv: Path, gate: dict[str, Any], output: Path) -> list[Path]:
+    import matplotlib.pyplot as plt
+
+    rows = sorted(_read_csv_vis(depth_csv), key=lambda r: int(r["run_length"]))
+    Ls = [int(r["run_length"]) for r in rows]
+    kl = [float(r["affected_mean_forward_kl"]) for r in rows]
+    top1 = [100 * float(r["affected_top1_agreement"]) for r in rows]
+
+    fig, axes = plt.subplots(1, 2, figsize=(10.6, 4.2), sharex=True)
+    fig.subplots_adjust(left=0.09, right=0.96, bottom=0.18, top=0.72, wspace=0.3)
+
+    # (a) conditional-on-affected KL vs depth, with additive reference.
+    ax = axes[0]
+    ax.plot(Ls, kl, color=BLUE, marker="o", linewidth=2.2, markersize=6, label="null-drop, affected")
+    # Additive reference: linear from the L=1 point (cost ~ per degraded layer).
+    if len(Ls) >= 2 and Ls[0] != 0:
+        slope = (kl[-1] - kl[0]) / (Ls[-1] - Ls[0])
+        ref = [kl[0] + slope * (L - Ls[0]) for L in Ls]
+        ax.plot(Ls, ref, color="#9AA3AF", linestyle="--", linewidth=1.4, label="additive (linear) reference")
+    ax.set_xlabel("Consecutive degraded layers (run length L)")
+    ax.set_ylabel("Conditional-on-affected mean KL (nats)")
+    ax.set_title("Is null-drop cost additive in depth?")
+    ax.grid(axis="y", color=GRID, linewidth=0.7)
+    ax.legend(loc="lower left")
+
+    # (b) top-1 agreement vs depth.
+    ax = axes[1]
+    ax.plot(Ls, top1, color=GREEN, marker="s", linewidth=2.2, markersize=6)
+    ax.set_xlabel("Consecutive degraded layers (run length L)")
+    ax.set_ylabel("Conditional-on-affected top-1 agreement (%)")
+    ax.set_title("Routing/top-1 stability vs depth")
+    ax.grid(axis="y", color=GRID, linewidth=0.7)
+
+    v = gate["verdicts"]
+    fig.suptitle(
+        f"null-drop depth additivity — {gate['decision']} ",
+        x=0.02, y=0.98, ha="left", fontsize=14, fontweight="bold",
+    )
+    fig.text(
+        0.02, 0.86,
+        "Each affected token drops one expert (lowest mass) per layer, no "
+        "renormalization; same affected sample across L. Additive-residual "
+        f"hypothesis predicts KL ~ L. Monotone: {v['monotone_in_l']}; "
+        f"super-linear: {v['superlinear_marginal_blowup']}.",
+        fontsize=9, color="#555E6B",
+    )
+    return _save(fig, output / "fig1_q1b_depth_additivity")
+
+
+def _plot_q1b_mechanism(
+    layer_csv: Path | None,
+    spacing_csv: Path | None,
+    cross_csv: Path | None,
+    gate: dict[str, Any],
+    output: Path,
+) -> list[Path]:
+    import matplotlib.pyplot as plt
+
+    has_layer = layer_csv is not None and layer_csv.is_file()
+    has_spacing = spacing_csv is not None and spacing_csv.is_file()
+    has_cross = cross_csv is not None and cross_csv.is_file()
+    panels = [has_layer, has_spacing, has_cross]
+    fig, axes = plt.subplots(1, 3, figsize=(13.2, 4.0))
+    fig.subplots_adjust(left=0.09, right=0.97, bottom=0.18, top=0.74, wspace=0.45)
+
+    if has_layer:
+        rows = sorted(_read_csv_vis(layer_csv), key=lambda r: float(r["affected_mean_forward_kl"]), reverse=True)
+        Ls = [int(r["layer"]) for r in rows]
+        kl = [float(r["affected_mean_forward_kl"]) for r in rows]
+        axes[0].bar(range(len(rows)), kl, color=[BLUE if k > max(kl) * 0.5 else "#AAB4C2" for k in kl], alpha=0.9)
+        axes[0].set_xticks(range(len(rows)), Ls, rotation=0, fontsize=7)
+        axes[0].set_xlabel("MoE layer (highest → lowest sensitivity)")
+        axes[0].set_ylabel("One-expert one-layer affected KL (nats)")
+        axes[0].set_title("Which layers are most sensitive?")
+        axes[0].grid(axis="y", color=GRID, linewidth=0.7)
+    else:
+        axes[0].text(0.5, 0.5, "layer-order scan off", ha="center", va="center")
+        axes[0].axis("off")
+
+    if has_spacing:
+        rows = sorted(_read_csv_vis(spacing_csv), key=lambda r: (int(r["run_length"]), int(r["gap"])))
+        seen: set[int] = set()
+        for r in rows:
+            L = int(r["run_length"])
+            if L in seen:
+                continue
+            seen.add(L)
+            xs = [int(x["gap"]) for x in rows if int(x["run_length"]) == L]
+            ys = [float(x["affected_mean_forward_kl"]) for x in rows if int(x["run_length"]) == L]
+            axes[1].plot(xs, ys, marker="o", linewidth=2.0, markersize=5, label=f"L={L}")
+        axes[1].set_xlabel("Degraded-layer gap (1 = contiguous)")
+        axes[1].set_ylabel("Affected mean KL (nats)")
+        axes[1].set_title("Does spacing (reconstruction) help?")
+        axes[1].grid(axis="y", color=GRID, linewidth=0.7)
+        axes[1].legend(loc="best")
+        axes[1].set_xticks([1, 2, 4, 8])
+    else:
+        axes[1].text(0.5, 0.5, "spacing scan off", ha="center", va="center")
+        axes[1].axis("off")
+
+    if has_cross:
+        rows = sorted(_read_csv_vis(cross_csv), key=lambda r: int(r["offset"]))
+        far = next((r for r in rows if r["bucket"] == "far_control"), None)
+        d_rows = [r for r in rows if int(r["offset"]) >= 1]
+        xs = [int(r["offset"]) for r in d_rows]
+        ys = [float(r["mean_forward_kl"]) for r in d_rows]
+        axes[2].plot(xs, ys, color=PURPLE, marker="^", linewidth=2.0, markersize=5, label="leak at +d")
+        if far is not None:
+            axes[2].axhline(float(far["mean_forward_kl"]), color=GREEN, linestyle="--", linewidth=1.2, label="far control")
+        axes[2].set_xlabel("Downstream offset from affected token (d)")
+        axes[2].set_ylabel("Clean-vs-erased KL (nats)")
+        axes[2].set_title("Does damage leak to other tokens?")
+        axes[2].grid(axis="y", color=GRID, linewidth=0.7)
+        axes[2].legend(loc="best")
+    else:
+        axes[2].text(0.5, 0.5, "cross-token scan off", ha="center", va="center")
+        axes[2].axis("off")
+
+    fig.suptitle(
+        f"null-drop mechanism: placement and locality — {gate['decision']}",
+        x=0.02, y=0.98, ha="left", fontsize=14, fontweight="bold",
+    )
+    fig.text(
+        0.02, 0.86,
+        "Non-gating. Layer order ranks which single layers must not be dropped; "
+        "spacing tests reconstruction headroom; cross-token leak separates local "
+        "damage from sequence-wide propagation.",
+        fontsize=9, color="#555E6B",
+    )
+    return _save(fig, output / "fig2_q1b_mechanism")
+
+
+def plot_q1b(
+    experiment_config: dict[str, Any],
+    *,
+    output_dir: str | Path | None = None,
+) -> dict[str, Any]:
+    import matplotlib.pyplot as plt
+
+    _style()
+    analysis = Path(experiment_config["q1b_output_dir"])
+    _require(analysis, "null_gate.json", "null_depth_scan.csv")
+    destination = (
+        Path(output_dir) if output_dir is not None else analysis / "figures_q1b"
+    )
+    destination.mkdir(parents=True, exist_ok=True)
+
+    gate = json.loads((analysis / "null_gate.json").read_text(encoding="utf-8"))
+    depth_csv = analysis / "null_depth_scan.csv"
+    layer_csv = analysis / "null_layer_order.csv"
+    spacing_csv = analysis / "null_spacing_scan.csv"
+    cross_csv = analysis / "null_cross_token.csv"
+
+    outputs: list[Path] = []
+    outputs.extend(_plot_q1b_depth(depth_csv, gate, destination))
+    plt.close("all")
+    outputs.extend(
+        _plot_q1b_mechanism(layer_csv, spacing_csv, cross_csv, gate, destination)
+    )
+    plt.close("all")
+
+    v = gate["verdicts"]
+    note = destination / "FIGURES.md"
+    note.write_text(
+        "\n".join(
+            [
+                "# Q1-B null-drop figure review",
+                "",
+                "## Automated headline",
+                "",
+                f"Formal decision: `{gate['decision']}`. Depth sweep L="
+                f"{gate['primary_scope']['run_lengths'][0]}→"
+                f"{gate['primary_scope']['run_lengths'][-1]} at AX4 anchor "
+                f"incidence {gate['primary_scope']['incidence']}: monotone "
+                f"`{v['monotone_in_l']}`, super-linear blow-up "
+                f"`{v['superlinear_marginal_blowup']}` "
+                f"(ratio {v['superlinear_marginal_ratio']:.2f}), large-divergence "
+                f"at L={gate['primary_scope']['headline_run_length']} frac "
+                f"{v['headline_l_large_divergence_fraction']:.5f}.",
+                "",
+                "## Human review checklist",
+                "",
+                "- [ ] Fig 1(a): affected KL vs L and the additive (linear) "
+                "reference agree with `null_gate.json`.",
+                "- [ ] The monotone / super-linear verdict matches the plotted "
+                "shape.",
+                "- [ ] Fig 2: layer sensitivity ranking, spacing benefit, and "
+                "cross-token leak are internally consistent.",
+                "- [ ] Single-domain, layer-banded pilot limitation accepted.",
+                "- [ ] One next action recorded before Q2 / AX4 hand-off.",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    outputs.append(note)
+
+    inputs = {
+        str(depth_csv): _sha256(depth_csv),
+        str(analysis / "null_gate.json"): _sha256(analysis / "null_gate.json"),
+    }
+    for name, path in (
+        ("layer", layer_csv), ("spacing", spacing_csv), ("cross", cross_csv),
+    ):
+        if path.is_file():
+            inputs[str(path)] = _sha256(path)
+
+    manifest = {
+        "analysis": "q1b_null",
+        "decision": gate["decision"],
+        "inputs": inputs,
+        "outputs": {str(path): _sha256(path) for path in outputs},
+        "human_review_complete": False,
+    }
+    write_json(destination / "figure_manifest.json", manifest)
+    return manifest

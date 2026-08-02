@@ -6,6 +6,8 @@ run_id = "q1-quality-erasure"
 run_dir = "artifacts/runs/q1-quality-erasure"
 output_dir = "artifacts/runs/q1-quality-erasure/analysis/q1"
 tail_output_dir = "artifacts/runs/q1-quality-erasure/analysis/q1_tail"
+# Q1-B null-drop mechanism probe (commits to null; renormalize dropped).
+q1b_output_dir = "artifacts/runs/q1-quality-erasure/analysis/q1b_null"
 seed = 7
 
 [probe]
@@ -65,3 +67,34 @@ monotone_slack = 1e-6
 # Kill signal: sub-1% mass causing frequent large divergence.
 large_divergence_kl = 2.0
 large_divergence_max_fraction = 0.01
+
+# Q1-B null-drop mechanism probe. Commits to null-drop (renormalize dropped as
+# a strategy). Decisive question: is null-drop quality loss controlled by the
+# number and placement of dropped expert-layers (additive and monotone in
+# depth, as the additive-residual hypothesis predicts), or does it compound /
+# depend on which layers / leak across tokens?
+[q1b_probe]
+token_budget = 16384
+chunk_size = 512
+incidence = 0.009                # AX4 anchor degraded-wave fraction
+depth_run_lengths = [1, 2, 4, 8] # primary sweep (AX4 worst case = 8)
+spacing_scan = true
+# For each run length: contiguous (gap=1) vs spaced every-`gap`th layer.
+spacing_runs = [{ run_length = 2, gap = 7 }, { run_length = 4, gap = 3 }]
+layer_order_scan = true          # one expert, one layer, all 16 layers
+cross_token_scan = true
+max_cross_offset = 8             # downstream offsets p+1..p+8
+
+# Frozen Q1-B gate: GO iff the depth sweep is monotone in L, has no super-linear
+# per-layer marginal blow-up by the AX4 worst case, and keeps <=1% large
+# divergence at L=8, all conditional on affected tokens.
+[q1b_gate]
+headline_policy = "null"
+headline_positioning = "mass_omission"
+incidence = 0.009
+headline_run_length = 8          # AX4 worst case
+experts_per_drop = 1
+max_superlinear_ratio = 3.0      # last/first per-layer marginal ratio
+large_divergence_kl = 2.0
+large_divergence_max_fraction = 0.01
+monotone_slack = 1e-6

@@ -325,3 +325,108 @@ class AnalyzeQ1TailTest(unittest.TestCase):
                 self.assertTrue((analysis / name).is_file(), name)
             gate = json.loads((analysis / "tail_gate.json").read_text())
             self.assertEqual(gate["decision"], "GO")
+
+
+Q1B_GATE = {
+    "headline_policy": "null",
+    "headline_positioning": "mass_omission",
+    "incidence": 0.009,
+    "headline_run_length": 8,
+    "experts_per_drop": 1,
+    "max_superlinear_ratio": 3.0,
+    "large_divergence_kl": 2.0,
+    "large_divergence_max_fraction": 0.01,
+    "monotone_slack": 1e-6,
+}
+
+
+def _write_q1b_depth(path: Path, *, kl_vals: list[float], large_frac: float = 0.0001) -> None:
+    Ls = [1, 2, 4, 8]
+    rows = []
+    for L, kl in zip(Ls, kl_vals, strict=True):
+        rows.append(
+            {
+                "policy": "null",
+                "positioning": "mass_omission",
+                "incidence": 0.009,
+                "run_length": L,
+                "experts_per_drop": 1,
+                "tokens_total": 4096,
+                "tokens_affected": int(4096 * 0.009),
+                "realized_incidence": 0.009,
+                "overall_mean_forward_kl": kl * 0.009,
+                "overall_top1_agreement": 1.0,
+                "overall_perplexity_ratio": 1.0,
+                "affected_mean_forward_kl": kl,
+                "affected_p90_forward_kl": kl * 1.5,
+                "affected_top1_agreement": 0.998 if kl < 1.0 else 0.9,
+                "affected_perplexity_ratio": 1.01,
+                "affected_large_divergence_fraction": (
+                    large_frac if L == 8 else 0.0001
+                ),
+                "affected_mean_missing_mass": 0.098,
+                "affected_experts_erased_mean": 1.0,
+            }
+        )
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+class AnalyzeQ1BTest(unittest.TestCase):
+    def _config(self) -> dict:
+        return {
+            "q1b_output_dir": "/tmp/q1b-test",
+            "q1b_probe": {"depth_run_lengths": [1, 2, 4, 8]},
+            "q1b_gate": dict(Q1B_GATE),
+        }
+
+    def _run(self, config: dict, kl_vals: list[float], large_frac: float = 0.0001) -> dict:
+        from ep_predict.analysis.q1 import analyze_q1b
+
+        with tempfile.TemporaryDirectory() as td:
+            analysis = Path(td)
+            config["q1b_output_dir"] = str(analysis)
+            _write_q1b_depth(analysis / "null_depth_scan.csv", kl_vals=kl_vals, large_frac=large_frac)
+            summary = analyze_q1b(config)
+            g = summary["gate"]
+            return {
+                "decision": g["decision"],
+                "monotone": g["verdicts"]["monotone_in_l"],
+                "superlinear": g["verdicts"]["superlinear_marginal_blowup"],
+            }
+
+    def test_gate_go_on_additive_depth(self) -> None:
+        out = self._run(self._config(), kl_vals=[0.005, 0.010, 0.020, 0.040])
+        self.assertEqual(out["decision"], "GO")
+        self.assertTrue(out["monotone"])
+        self.assertFalse(out["superlinear"])
+
+    def test_gate_stop_on_non_monotone(self) -> None:
+        out = self._run(self._config(), kl_vals=[0.005, 0.010, 0.005, 0.040])
+        self.assertEqual(out["decision"], "STOP")
+        self.assertFalse(out["monotone"])
+
+    def test_gate_stop_on_superlinear_blowup(self) -> None:
+        out = self._run(self._config(), kl_vals=[0.001, 0.002, 0.004, 0.080])
+        self.assertEqual(out["decision"], "STOP")
+        self.assertTrue(out["superlinear"])
+
+    def test_gate_stop_on_large_divergence_at_worst_l(self) -> None:
+        out = self._run(self._config(), kl_vals=[0.005, 0.010, 0.020, 0.040], large_frac=0.05)
+        self.assertEqual(out["decision"], "STOP")
+
+    def test_artifacts_emitted(self) -> None:
+        from ep_predict.analysis.q1 import analyze_q1b
+
+        with tempfile.TemporaryDirectory() as td:
+            analysis = Path(td)
+            config = self._config()
+            config["q1b_output_dir"] = str(analysis)
+            _write_q1b_depth(analysis / "null_depth_scan.csv", kl_vals=[0.005, 0.010, 0.020, 0.040])
+            analyze_q1b(config)
+            for name in ("null_gate.json", "null_summary.json", "NULL_REPORT.md"):
+                self.assertTrue((analysis / name).is_file(), name)
+            gate = json.loads((analysis / "null_gate.json").read_text())
+            self.assertEqual(gate["decision"], "GO")

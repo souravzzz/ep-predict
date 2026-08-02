@@ -94,6 +94,12 @@ class ErasureController:
         self.tail_mode = False
         self.exact_experts: int | None = None  # when set, erase exactly this many
         self.run_length = 1
+        # Q1-B spacing: degraded layers sit at `start + k*gap` for k < run_length
+        # instead of a contiguous `start..start+run_length` block (gap=1 = block).
+        self.tail_gap = 1
+        # Q1-B layer pin: when set, every affected token's first degraded layer
+        # is exactly this layer index (used to isolate single-layer sensitivity).
+        self._pin_layer: int | None = None
         self._affected_mask: torch.Tensor | None = None  # bool (R,) cpu
         self._start_layer: torch.Tensor | None = None  # int (R,) cpu
 
@@ -161,15 +167,28 @@ class ErasureController:
         cell_stats: dict[str, float] | None = None,
         num_tokens: int | None = None,
         stream_id: int = 0,
+        gap: int = 1,
+        pin_layer: int | None = None,
+        cell_seed: int | None = None,
     ) -> None:
         """Configure an AX4-faithful tail event: only a fraction `incidence`
-        of tokens are erased, each in `run_length` consecutive layers (one
-        expert per layer). Non-affected tokens pass through untouched.
+        of tokens are erased, each dropping `experts_per_drop` expert across
+        `run_length` (consecutive by default, or every-`gap`th layer) expert
+        layers. Non-affected tokens pass through untouched.
 
         `stream_id` decorrelates the affected-token sample across successive
         token chunks so a rare incidence accumulates affected tokens over the
         budget; the same (incidence, run_length, stream_id) triple always
-        reproduces the identical mask."""
+        reproduces the identical mask. Q1-B additionally supports:
+
+        - `gap > 1`: degraded layers sit at `start + k*gap` (spaced) instead of
+          a contiguous block, so deeper layers can reconstruct on a healthier
+          stream;
+        - `pin_layer`: force every affected token's first degraded layer;
+        - `cell_seed`: when given, use `seed + cell_seed` as the sole sample
+          seed, letting a caller reuse the *same* affected-token set across
+          a family of cells (e.g. every run length, or every layer) for clean
+          within-token comparisons."""
         if policy not in _POLICIES:
             raise ValueError(f"unknown policy {policy!r}")
         if positioning not in _POSITIONINGS:
@@ -178,6 +197,10 @@ class ErasureController:
             raise ValueError(f"incidence must be in (0,1], got {incidence!r}")
         if run_length < 1 or run_length > self.num_layers:
             raise ValueError(f"run_length={run_length} out of range")
+        if gap < 1 or gap > self.num_layers:
+            raise ValueError(f"gap={gap} out of range")
+        if pin_layer is not None and not (0 <= int(pin_layer) < self.num_layers):
+            raise ValueError(f"pin_layer={pin_layer} out of range")
         if experts_per_drop < 1:
             raise ValueError(f"experts_per_drop must be >=1, got {experts_per_drop!r}")
         self.policy = policy
@@ -185,25 +208,43 @@ class ErasureController:
         self.tail_mode = True
         self.exact_experts = int(experts_per_drop)
         self.run_length = int(run_length)
+        self.tail_gap = int(gap)
+        self._pin_layer = int(pin_layer) if pin_layer is not None else None
         self._cell_stats = cell_stats
         self._affected_mask = None
         self._start_layer = None
         if num_tokens is not None:
-            self._prepare_tail(num_tokens, incidence, stream_id)
+            self._prepare_tail(
+                num_tokens, incidence, stream_id, gap=self.tail_gap,
+                pin_layer=self._pin_layer, cell_seed=cell_seed,
+            )
 
     def _prepare_tail(
-        self, num_tokens: int, incidence: float, stream_id: int = 0
+        self,
+        num_tokens: int,
+        incidence: float,
+        stream_id: int = 0,
+        gap: int = 1,
+        pin_layer: int | None = None,
+        cell_seed: int | None = None,
     ) -> None:
-        rng = torch.Generator(device="cpu").manual_seed(
-            self.seed
-            + round(incidence * 1e6) % 10**6
-            + self.run_length * 131
-            + int(stream_id) * 7919
-        )
+        if cell_seed is not None:
+            rng_seed = self.seed + int(cell_seed)
+        else:
+            rng_seed = (
+                self.seed
+                + round(incidence * 1e6) % 10**6
+                + self.run_length * 131
+                + int(stream_id) * 7919
+            )
+        rng = torch.Generator(device="cpu").manual_seed(rng_seed)
         affected = torch.rand((num_tokens,), generator=rng) < incidence
-        # Safe start layer so a `run_length` run never exceeds the 16 layers.
-        high = self.num_layers - self.run_length
-        start = torch.randint(0, high + 1, (num_tokens,), generator=rng)
+        if pin_layer is not None:
+            start = torch.full((num_tokens,), pin_layer, dtype=torch.long)
+        else:
+            # Highest valid start so `start + (run_length-1)*gap` stays in range.
+            high = max(0, self.num_layers - 1 - (self.run_length - 1) * gap)
+            start = torch.randint(0, high + 1, (num_tokens,), generator=rng)
         self._affected_mask = affected
         self._start_layer = torch.where(affected, start, torch.zeros_like(start))
 
@@ -243,8 +284,13 @@ class ErasureController:
                 raise RuntimeError("tail cell not prepared before forward")
             affected = self._affected_mask.to(self.device)
             start = self._start_layer.to(self.device)
-            in_run = (start <= layer_index) & (
-                layer_index < start + self.run_length
+            # Degraded layers sit at `start + k*gap` for k < run_length.
+            offset = layer_index - start
+            gap = self.tail_gap
+            in_run = (
+                (offset >= 0)
+                & (offset % gap == 0)
+                & ((offset // gap) < self.run_length)
             )
             return affected & in_run
         if self.topology == SPREAD:
@@ -1129,4 +1175,312 @@ def measure_q1_tail(
         "semantic_smoke": smoke,
         "tail_sweep_csv": str(analysis_dir / "tail_sweep.csv"),
         "decode_leg": decode_leg is not None,
+    }
+
+
+class _CrossTokenAccumulator:
+    """Q1-B cross-token leak: measure clean-vs-erased KL at positions at a
+    given downstream offset from an affected token, versus a far control.
+
+    The direct-damage positions (the affected tokens themselves) are excluded
+    from every leak bucket, so the numbers isolate whether erasing one token's
+    expert shifts the model's output on *other* tokens (residual / attention
+    propagation) or whether damage is local to the affected token.
+    """
+
+    def __init__(self, *, max_offset: int) -> None:
+        self.max_offset = int(max_offset)
+        self.counts = [0] * (self.max_offset + 1)  # offset d (downstream)
+        self.sums = [0.0] * (self.max_offset + 1)
+        self.far_count = 0
+        self.far_sum = 0.0
+
+    def add(self, kl: torch.Tensor, affected: torch.Tensor) -> None:
+        n = int(kl.numel())
+        affected = affected.to(torch.bool)
+        idx = affected.nonzero(as_tuple=True)[0]
+        if idx.numel() == 0:
+            return
+        kl = kl.detach().float()
+        for d in range(1, self.max_offset + 1):
+            q = idx + d
+            q = q[q < n]
+            keep = ~affected[q]
+            q = q[keep]
+            self.counts[d] += int(q.numel())
+            self.sums[d] += float(kl[q].sum().item())
+        # Far control: positions not affected and with no affected token within
+        # the +-max_offset window around them.
+        far = torch.full((n,), True, dtype=torch.bool)
+        for d in range(-self.max_offset, self.max_offset + 1):
+            far[(idx + d) % n] = False  # cheap; also marks affected positions
+        far &= ~affected
+        self.far_count += int(far.sum().item())
+        self.far_sum += float(kl[far].sum().item())
+
+    def row(self) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        for d in range(1, self.max_offset + 1):
+            rows.append(
+                {
+                    "offset": d,
+                    "bucket": f"downstream_{d}",
+                    "count": self.counts[d],
+                    "mean_forward_kl": (
+                        self.sums[d] / self.counts[d] if self.counts[d] else float("nan")
+                    ),
+                }
+            )
+        rows.append(
+            {
+                "offset": -1,
+                "bucket": "far_control",
+                "count": self.far_count,
+                "mean_forward_kl": (
+                    self.far_sum / self.far_count if self.far_count else float("nan")
+                ),
+            }
+        )
+        return rows
+
+
+def _q1b_cross_token_row(rows: list[dict[str, str]], bucket: str) -> dict[str, str]:
+    matches = [r for r in rows if r["bucket"] == bucket]
+    if len(matches) != 1:
+        raise ValueError(f"cross-token bucket not unique: {bucket}")
+    return matches[0]
+
+
+def measure_q1b(
+    model_config: dict[str, Any],
+    experiment_config: dict[str, Any],
+    *,
+    limit: int | None = None,
+) -> dict[str, Any]:
+    """Measure Q1-B: the null-drop mechanism probe on the frozen base model.
+
+    Commits to the null-drop policy (renormalize dropped as a strategy). The
+    primary gating cell is the *depth sweep*: the same affected-token samples
+    (AX4 anchor incidence) lose one expert per layer for L in {1,2,4,8}
+    consecutive layers; we test whether conditional-on-affected quality cost is
+    monotone and roughly additive in depth (the additive-residual hypothesis).
+    Three non-gating scans reuse the same machinery:
+
+    - layer order: same affected set, drop in exactly one layer, all 16 layers;
+    - consecutive vs distant: L in {2,4} contiguous versus every-`gap`th layer
+      (letting deeper layers reconstruct on a healthier stream);
+    - cross-token leak: is damage local to the affected token or does it
+      propagate to downstream neighbors / far positions?
+    """
+    cfg = experiment_config["q1b_probe"]
+    gate = experiment_config["q1b_gate"]
+    run_dir = Path(experiment_config.get("run_dir", _RUN_DIR))
+    analysis_dir = Path(experiment_config.get("q1b_output_dir", _ANALYSIS_DIR))
+    run_dir.mkdir(parents=True, exist_ok=True)
+    analysis_dir.mkdir(parents=True, exist_ok=True)
+    fingerprint = config_fingerprint(model_config, {"experiment": experiment_config})
+
+    probe_definition = analysis_dir / "probe_definition.json"
+    if probe_definition.exists():
+        existing = json.loads(probe_definition.read_text(encoding="utf-8"))
+        if existing.get("config_fingerprint") != fingerprint:
+            raise RuntimeError("Q1B probe directory has a different configuration")
+    else:
+        write_json(
+            probe_definition,
+            {
+                "config_fingerprint": fingerprint,
+                "model_config": model_config,
+                "experiment_config": experiment_config,
+                "policy": "null",
+                "semantics": "null_drop_runtime_patch_exact_expert_no_renormalize",
+            },
+        )
+
+    model, tokenizer = load_model_and_tokenizer(model_config)
+    model_report, _ = inspect_loaded_model(model)
+    write_json(run_dir / "model_report.json", model_report)
+    num_layers = int(model_report["router_count"])
+    seed = int(experiment_config.get("seed", 7))
+    large_kl = float(gate["large_divergence_kl"])
+
+    policy = str(gate["headline_policy"])  # "null"
+    positioning = str(gate["headline_positioning"])  # "mass_omission"
+    incidence = float(gate["incidence"])
+    experts = int(gate["experts_per_drop"])
+    depth_run_lengths = [int(v) for v in cfg["depth_run_lengths"]]
+    spacing_runs = [dict(v) for v in cfg.get("spacing_runs", [])]
+    enable_layer = bool(cfg.get("layer_order_scan", True))
+    enable_spacing = bool(cfg.get("spacing_scan", True))
+    enable_cross = bool(cfg.get("cross_token_scan", True))
+    max_offset = int(cfg.get("max_cross_offset", 8))
+
+    # Per-family cell seeds so each family shares one affected-token sample
+    # across its cells (clean within-token comparisons).
+    DEPTH_SEED, LAYER_SEED, SPACING_SEED, CROSS_SEED = 1000, 2000, 3000, 4000
+
+    ids = _load_wikitext_ids(_DEFAULT_PARQUET, tokenizer)
+    token_budget = int(cfg["token_budget"])
+    if token_budget:
+        ids = ids[:token_budget]
+    chunks = _token_chunks(ids, int(cfg["chunk_size"]), limit)
+
+    controller = ErasureController(model, num_layers=num_layers, seed=seed)
+    with controller:
+        # Depth sweep cells (gating), shared affected sample.
+        depth_accs = {
+            L: _TailCellAccumulator(
+                policy=policy, positioning=positioning, incidence=incidence,
+                run_length=L, experts_per_drop=experts,
+            )
+            for L in depth_run_lengths
+        }
+        for acc in depth_accs.values():
+            acc.set_large_kl(large_kl)
+
+        # Layer-order cells (non-gating).
+        layer_accs: dict[int, _TailCellAccumulator] = {}
+        if enable_layer:
+            for li in range(num_layers):
+                acc = _TailCellAccumulator(
+                    policy=policy, positioning=positioning, incidence=incidence,
+                    run_length=1, experts_per_drop=experts,
+                )
+                acc.set_large_kl(large_kl)
+                layer_accs[li] = acc
+
+        # Spacing cells (non-gating): for each run length, contiguous (gap=1)
+        # and a spaced gap, sharing one affected sample.
+        spacing_cells: list[tuple[int, int]] = []
+        spacing_accs: dict[tuple[int, int], _TailCellAccumulator] = {}
+        if enable_spacing:
+            for spec in spacing_runs:
+                L = int(spec["run_length"])
+                gap = int(spec.get("gap", 2))
+                for g in sorted({1, gap}):
+                    spacing_cells.append((L, g))
+                    acc = _TailCellAccumulator(
+                        policy=policy, positioning=positioning, incidence=incidence,
+                        run_length=L, experts_per_drop=experts,
+                    )
+                    acc.set_large_kl(large_kl)
+                    spacing_accs[(L, g)] = acc
+
+        # Cross-token cell (non-gating).
+        cross_acc = _CrossTokenAccumulator(max_offset=max_offset) if enable_cross else None
+
+        # Smoke test the null-drop patch (one exact one-expert drop, no reno).
+        smoke = _tail_semantic_smoke(tokenizer, model, controller, incidence)
+        smoke["policy"] = policy
+
+        for chunk_index, chunk in enumerate(chunks):
+            input_ids = chunk[:-1].unsqueeze(0).to(model.device)
+            targets = chunk[1:]
+            with torch.inference_mode():
+                logits_c = model(input_ids=input_ids).logits.float().cpu()
+            num_tokens = int(input_ids.shape[1])
+
+            def _run_cell(
+                *,
+                run_length: int,
+                gap: int = 1,
+                pin_layer: int | None = None,
+                cell_seed: int,
+                acc,
+            ) -> None:
+                cell_stats = {"n_active": 0, "sum_realized_mass": 0.0, "n_erased": 0}
+                controller.set_tail_cell(
+                    policy=policy, positioning=positioning, incidence=incidence,
+                    run_length=run_length, experts_per_drop=experts,
+                    cell_stats=cell_stats, num_tokens=num_tokens,
+                    stream_id=chunk_index, gap=gap, pin_layer=pin_layer,
+                    cell_seed=cell_seed,
+                )
+                controller.active = True
+                with torch.inference_mode():
+                    logits_e = model(input_ids=input_ids).logits.float().cpu()
+                controller.active = False
+                metrics = _paired_metrics(logits_c, logits_e, targets, large_kl)
+                if isinstance(acc, _CrossTokenAccumulator):
+                    acc.add(metrics["kl"], controller.affected_mask)
+                else:
+                    acc.add(metrics, controller.affected_mask)
+                    acc.add_cell_stats(cell_stats)
+
+            # Depth (gating).
+            for L in depth_run_lengths:
+                _run_cell(run_length=L, cell_seed=DEPTH_SEED, acc=depth_accs[L])
+            # Layer order.
+            if enable_layer:
+                for li in range(num_layers):
+                    _run_cell(
+                        run_length=1, pin_layer=li, cell_seed=LAYER_SEED,
+                        acc=layer_accs[li],
+                    )
+            # Spacing.
+            if enable_spacing:
+                for (L, g) in spacing_cells:
+                    _run_cell(run_length=L, gap=g, cell_seed=SPACING_SEED,
+                              acc=spacing_accs[(L, g)])
+            # Cross-token.
+            if cross_acc is not None:
+                _run_cell(run_length=1, cell_seed=CROSS_SEED, acc=cross_acc)
+
+            print(
+                f"[Q1B] chunk {chunk_index + 1}/{len(chunks)} "
+                f"({num_tokens} tokens)"
+            )
+            del logits_c
+
+    depth_rows = [acc.row() for acc in depth_accs.values()]
+    depth_rows.sort(key=lambda r: int(r["run_length"]))
+    _write_csv(analysis_dir / "null_depth_scan.csv", depth_rows)
+
+    layer_rows = [
+        {"layer": li, **{k: v for k, v in acc.row().items()}}
+        for li, acc in sorted(layer_accs.items())
+    ]
+    if layer_rows:
+        _write_csv(analysis_dir / "null_layer_order.csv", layer_rows)
+
+    spacing_rows = [
+        {"run_length": L, "gap": g,
+         **{k: v for k, v in spacing_accs[(L, g)].row().items()}}
+        for (L, g) in sorted(spacing_cells)
+    ]
+    if spacing_rows:
+        _write_csv(analysis_dir / "null_spacing_scan.csv", spacing_rows)
+
+    if cross_acc is not None:
+        _write_csv(analysis_dir / "null_cross_token.csv", cross_acc.row())
+
+    write_json(
+        analysis_dir / "null_run_manifest.json",
+        {
+            "run_id": str(experiment_config.get("run_id", "q1-quality-erasure")),
+            "stage": "q1b_null",
+            "state": "complete",
+            "config_fingerprint": fingerprint,
+            "semantic_smoke": smoke,
+            "environment": environment_report(),
+            "chunks": len(chunks),
+            "token_budget": token_budget,
+            "depth_run_lengths": depth_run_lengths,
+            "layer_order_scan": enable_layer,
+            "spacing_scan": enable_spacing,
+            "cross_token_scan": enable_cross,
+            "policy": policy,
+            "incidence": incidence,
+        },
+    )
+    return {
+        "state": "complete",
+        "run_id": str(experiment_config.get("run_id", "q1-quality-erasure")),
+        "chunks": len(chunks),
+        "cells": len(depth_rows) + len(layer_rows) + len(spacing_rows),
+        "semantic_smoke": smoke,
+        "depth_csv": str(analysis_dir / "null_depth_scan.csv"),
+        "layer_csv": str(analysis_dir / "null_layer_order.csv"),
+        "spacing_csv": str(analysis_dir / "null_spacing_scan.csv"),
+        "cross_token_csv": str(analysis_dir / "null_cross_token.csv"),
     }

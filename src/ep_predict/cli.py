@@ -367,6 +367,37 @@ def _plot_q1_tail(args: argparse.Namespace) -> int:
     return 0
 
 
+def _measure_q1b(args: argparse.Namespace) -> int:
+    from ep_predict.hardware.q1 import measure_q1b
+
+    result = measure_q1b(
+        load_toml(args.model_config),
+        load_toml(args.experiment_config),
+        limit=args.limit,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _analyze_q1b(args: argparse.Namespace) -> int:
+    from ep_predict.analysis.q1 import analyze_q1b
+
+    summary = analyze_q1b(load_toml(args.config))
+    print(json.dumps(summary["gate"], indent=2, sort_keys=True))
+    return 0
+
+
+def _plot_q1b(args: argparse.Namespace) -> int:
+    from ep_predict.visualize.q1 import plot_q1b
+
+    manifest = plot_q1b(
+        load_toml(args.config),
+        output_dir=args.output,
+    )
+    print(json.dumps(manifest, indent=2, sort_keys=True))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ep-predict",
@@ -654,6 +685,36 @@ def build_parser() -> argparse.ArgumentParser:
     q1_tail_plot_parser.add_argument("--config", required=True, type=Path)
     q1_tail_plot_parser.add_argument("--output", type=Path)
     q1_tail_plot_parser.set_defaults(function=_plot_q1_tail)
+
+    q1b_measure_parser = subparsers.add_parser(
+        "measure-q1b",
+        help="run the Q1B null-drop mechanism sweep on the base model",
+    )
+    q1b_measure_parser.add_argument("--model-config", required=True, type=Path)
+    q1b_measure_parser.add_argument(
+        "--experiment-config", required=True, type=Path
+    )
+    q1b_measure_parser.add_argument(
+        "--limit",
+        type=int,
+        help="process only the first N token chunks for a smoke test",
+    )
+    q1b_measure_parser.set_defaults(function=_measure_q1b)
+
+    q1b_parser = subparsers.add_parser(
+        "analyze-q1b",
+        help="apply the frozen Q1B null-drop gate and aggregate the scans",
+    )
+    q1b_parser.add_argument("--config", required=True, type=Path)
+    q1b_parser.set_defaults(function=_analyze_q1b)
+
+    q1b_plot_parser = subparsers.add_parser(
+        "plot-q1b",
+        help="generate the Q1B depth-additivity and mechanism figures",
+    )
+    q1b_plot_parser.add_argument("--config", required=True, type=Path)
+    q1b_plot_parser.add_argument("--output", type=Path)
+    q1b_plot_parser.set_defaults(function=_plot_q1b)
 
     audit_parser = subparsers.add_parser(
         "audit-artifacts",

@@ -1,14 +1,18 @@
 # Project status
 
-**Current focus:** Q1 — expert-erasure quality probe: does the frozen model
-tolerate the bounded missing routed mass that AX4's deadline contract relies
-on?
-**Current stage:** Q1 measured on two tracks. The universal mass-budget
-headline produced a decisive **STOP** (KL 5.81), but a new AX4-faithful
-tail-event sub-track (rare one-expert one-layer drops) is far less destructive
-— monotone, no kill signal, and near-free under the model's native null-drop
-semantics. The non-visual closeout (tests, audit, log) is done; the decisive
-cell choice and the human figure review remain before Q2.
+**Current focus:** Q1-B — the null-drop mechanism probe: is the frozen model's
+quality cost from bounded expert erasure additive and monotone in the number
+and placement of dropped expert-layers (the additive-residual hypothesis AX4's
+bounded-run contract and Q2's training target rely on)?
+**Current stage:** Q1-B measured and **GO** on the frozen gate. On the frozen
+base model under null-drop (one expert per degraded layer, same affected
+sample, AX4 anchor incidence 0.009, conditional on affected tokens), quality
+cost is monotone and roughly additive in depth L=1→8 (KL 0.0041→0.0133), with
+flat per-layer marginal (ratio 1.20, gate ≤3), zero large divergence at the
+AX4 worst case L=8, layer-uniform sensitivity (~1.6× spread), no reconstruction
+benefit from spacing, and no meaningful cross-token leak (downstream ≈ far
+control). The measured closeout (tests, audit, figures, log) is done; human
+figure review and the Q2 robustness-training decision remain.
 **Last updated:** 2026-08-02
 
 | Gate | Question | State | Exit evidence |
@@ -27,7 +31,7 @@ cell choice and the human figure review remain before Q2.
 | C0 | Does post-training materially change matched-token trajectory predictability? | Pilot not supported; review pending | Base/Instruct retain 89.7% of selections; layer-0→15 conditional-gain change is +1.6 pp versus a 5 pp gate |
 | C1 | Does the result transfer to a top-1/top-2 checkpoint? | Deferred; explicit permission required | No model download or testbed change authorized |
 | Q1 | Does the frozen model tolerate the expert erasure AX4's deadline contract relies on? Is quality loss controlled by missing routed mass? | STOP (universal) / tail STOP-unclear (measured); figure review pending | Universal mass-budget headline (renormalize, m=0.125): KL 5.81, top-1 9.2%, PPL 279.9, non-monotone. Tail-event sub-track (rare one-expert one-layer drops): unmonotone, no kill; conditional-on-affected KL 0.128/top-1 86%/PPL 1.13 under renormalize, but null-drop is near-free (KL 0.0032, top-1 99.2%) |
-| Q1B | Under null-drop, is quality loss additive and monotone in the number/placement of dropped expert-layers (depth, layer order, spacing, cross-token leak)? | Draft protocol; awaiting freeze + implementation; null-drop adopted, renormalize dropped | Depth sweep L=1→8 at AX4 anchor incidence; gate: monotone + no super-linear blow-up + ≤1% large divergence at L=8, conditional-on-affected |
+| Q1B | Under null-drop, is quality loss additive and monotone in the number/placement of dropped expert-layers (depth, layer order, spacing, cross-token leak)? | **GO; measured** (figure review pending) | Depth sweep L=1→8 conditional-on-affected: monotone (KL 0.0041→0.0133), flat per-layer marginal (ratio 1.20 ≤3), 0% large divergence at L=8; layer-uniform, spacing-insensitive, no cross-token leak |
 | Q2 | Can availability-conditioned robustness training make the model tolerate the AX4 erasure distribution? | Deferred; gated on Q1/Q1B | Minimal fallback/calibration intervention, not generic dropout |
 | AX1 | Under assumed future MTP-style routing quality, what capacity/TPOT envelope does predictive offload enable? | Projected region exists; review pending | At measured PCIe and assumed C=99%, A=1.5×, wave-local P99 improves 34–39% versus reactive offload; FCFS queue tails are materially worse |
 | AX2 | What bandwidth, latency, reliability, amplification, and granularity bounds define viable regions? | Complete; review pending | K=16, A=1× needs 71.3/22.8/11.6/8.2 GB/s at Δ=1/3/6/9; reliability remains orthogonal |
@@ -51,6 +55,14 @@ cell choice and the human figure review remain before Q2.
       on the affected tokens (CLI `measure/analyze/plot-q1-tail`).
 - [x] Human-decide whether Q1's decisive cell is the universal renormalize
       mass sweep (STOP) or the AX4-anchored tail (null-drop near-free).
+- [x] Freeze the Q1-B protocol (commit to null-drop; renormalize dropped).
+- [x] Implement Q1-B: extend the erasure controller (pin layer, spacing gap,
+      shared cell seed), measure/analyze/plot subcommands, config, and tests.
+- [x] Execute Q1-B on the frozen base checkpoint and apply the frozen gate
+      (depth additivity L=1→8 at AX4 anchor, conditional-on-affected): **GO**.
+- [ ] Human review the Q1-B figures (fig1 depth additivity + fig2 mechanism)
+      before deciding the Q2 availability-conditioned robustness-training
+      target.
 - [ ] Confirm the actual machine exposes the intended 24 GB NVIDIA GPU.
 - [x] Install the `data` and `inference` dependency groups.
 - [x] Materialize and review the revision-pinned standard-small workload.

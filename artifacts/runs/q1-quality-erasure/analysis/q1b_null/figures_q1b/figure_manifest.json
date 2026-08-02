@@ -1,0 +1,19 @@
+{
+  "analysis": "q1b_null",
+  "decision": "GO",
+  "human_review_complete": false,
+  "inputs": {
+    "artifacts/runs/q1-quality-erasure/analysis/q1b_null/null_cross_token.csv": "948dbd39d0de94286b2494bc6092116f18daf4c30f0e3b7111a9d7b21fa31b80",
+    "artifacts/runs/q1-quality-erasure/analysis/q1b_null/null_depth_scan.csv": "acc1aa8ebcc79971d914d7ec830a576b1be2074996b95cc32fe59274b08a8e9d",
+    "artifacts/runs/q1-quality-erasure/analysis/q1b_null/null_gate.json": "f0601e5e226c6d6c76744024a12de6578b07fed3458f01f19470a8b676c64b3d",
+    "artifacts/runs/q1-quality-erasure/analysis/q1b_null/null_layer_order.csv": "067eb4006c869a3af009ceb5207a9e5e8bcb43d876d70f689f75d56452310966",
+    "artifacts/runs/q1-quality-erasure/analysis/q1b_null/null_spacing_scan.csv": "ff6716b26f7a2b83275092ed7e9bddcfa10b20244f5f6dacd34fda575cf1d89a"
+  },
+  "outputs": {
+    "artifacts/runs/q1-quality-erasure/analysis/q1b_null/figures_q1b/FIGURES.md": "0a5defdabbe12ab8974d141ea30118970350073d0f7aed51b370b8936654844c",
+    "artifacts/runs/q1-quality-erasure/analysis/q1b_null/figures_q1b/fig1_q1b_depth_additivity.pdf": "dc6910892021812a44d922c0d81f9e48a3bec384f7a1e70a29e89a6cd2caee2b",
+    "artifacts/runs/q1-quality-erasure/analysis/q1b_null/figures_q1b/fig1_q1b_depth_additivity.png": "a5d91b90ed72e9a0445dc588b986fc468bcdf162c941b3423f763fd90104e62f",
+    "artifacts/runs/q1-quality-erasure/analysis/q1b_null/figures_q1b/fig2_q1b_mechanism.pdf": "23a26415a4fda06d949459c6a9b14f5e1d80573b66d7ee8191851e39fed8e42b",
+    "artifacts/runs/q1-quality-erasure/analysis/q1b_null/figures_q1b/fig2_q1b_mechanism.png": "1f7040f1fe5dd92beee454744e6e8ff081f60db959378cdb9c55859510189610"
+  }
+}

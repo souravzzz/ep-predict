@@ -533,3 +533,38 @@ The immutable run manifest and metrics remain the source of truth.
   training for. It cannot show current-model quality under missing experts.
 - One next action: human review. Do not start training, new inference, or a
   new checkpoint without explicit permission.
+
+## Q1-B: null-drop mechanism probe (depth additivity, placement, leak)
+
+**Status:** measured; frozen gate **GO**
+**Track:** empirical quality measurement, closed loop back to AX4/Q2
+**Date:** 2026-08-02
+**Config:** `configs/experiment/q1-quality-erasure.toml` (`[q1b_probe]`, `[q1b_gate]`)
+**Protocol:** `docs/Q1B_PROTOCOL.md` (frozen) — commits to null-drop; renormalize dropped as a strategy.
+**Checkpoint/data:** frozen OLMoE-1B-7B-0125 base (revision 9b0c1aa…) over WikiText-2 validation, prefill, 15,872 tokens / 31 chunks. No training, no model download, no second checkpoint.
+
+- **Mechanism decision (from Q1/Q1-tail):** renormalize is ~40× worse than null at equal single-expert mass and theoretically wrong (it rescales survivors, amplifying the removed mass); each routed expert adds a roughly independent residual-stream update. Q1-B maps the null-drop mechanism the AX4 bounded-run contract and any Q2 training target rely on.
+
+### Decisive question
+On the frozen base model, is null-drop quality loss controlled by the *number and placement* of dropped expert-layers — approximately **additive and monotone in depth** (additive-residual hypothesis) — or does it compound, depend on which layers are hit, or leak across tokens?
+
+### Primary gate (frozen, null + mass-omission, one expert/layer, AX4 anchor incidence 0.009, same affected sample, conditional-on-affected)
+| Verdict | Value | Gate |
+|---|---|---|
+| Monotone in L∈{1,2,4,8} | **True** (0.0041→0.0053→0.0073→0.0133) | required |
+| Super-linear marginal blow-up | **False** (last/first per-layer marginal ratio 1.20) | ≤ 3.0 |
+| Large divergence at L=8 | **False** (fraction 0.0000) | ≤ 0.01 |
+
+**Decision: GO.** Conditional-on-affected mean KL at worst case L=8 is **0.0133** (top-1 93.6%, PPL ratio ~0.99), with 186 affected tokens and **zero** KL≥2 events at any depth. Per-layer marginal cost is roughly flat (0.00126, 0.00097, 0.00151 nats/layer): strictly monotone, no compounding blow-up. Cost grows ~3.3× from L=1→8 (mildly sub-linear in depth), consistent with the additive-residual mechanism.
+
+### Non-gating scans
+- **Layer order:** sensitivity is narrow and layer-uniform — all 16 single-layer drops between KL 0.0017 (layer 14) and 0.0027 (layer 0), only ~1.6× spread. No layer family is a critical must-hold; erasure cost is roughly placement-independent.
+- **Consecutive vs distant (same affected sample):** no reliable reconstruction benefit. L=2 slightly better spaced (0.0039 vs 0.0043); L=4 worse spaced (0.0078 vs 0.0059). Placement within a run matters little → consistent with independent/additive contributions rather than emergent depth-amplified compounding.
+- **Cross-token leak:** downstream offsets 1–8 all KL ≈ 0.0013–0.0027, indistinguishable from the far-control baseline (0.0017). Damage is effectively local to the affected token; only a small, spatially-*uniform* contamination appears across a contaminated chunk (from attention/residual spread), ~10× below nothing and small in absolute terms. No propagating, distance-growing leak.
+
+### Interpretation and hand-off
+- The additive-residual thesis is **supported**: bounded null-drop quality cost is monotone, roughly additive in the number of dropped expert-layers, layer-uniform, and local. AX4's up-to-8-consecutive-layer bounded-run contract is costed at ≤0.013 nats conditional KL at the worst case — semantically negligible (~0.01 in logP).
+- **Q2** is now better-posed: any availability-conditioned robustness training should target the measured depth/incidence distribution and per-layer-uniform cost; the target quality margin is small and already near-free under null-drop, so Q2's value is defensive/calibration rather than correcting a large degradation.
+- **Scheduler/hardware:** layer-uniform and spacing-insensitive means no layer must be specially guarded and no reconstruction-window scheduling is required by quality — though it remains a latency/runtime concern.
+- Evidence boundary: single frozen revision, single domain (WikiText-2), prefill scope, 186 affected tokens at the anchor. All derived products under `artifacts/runs/q1-quality-erasure/analysis/q1b_null/`.
+- One next action: human visual review of `fig1_q1b_depth_additivity` + `fig2_q1b_mechanism`, then hand off to Q2 robustness-training decision.

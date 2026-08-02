@@ -1,0 +1,101 @@
+{
+  "analysis_dir": "artifacts/runs/q1-quality-erasure/analysis/q1b_null",
+  "decision": "GO",
+  "gate": {
+    "decision": "GO",
+    "depth": [
+      {
+        "affected_large_divergence_fraction": 0.0,
+        "affected_mean_forward_kl": 0.004073160611623798,
+        "affected_perplexity_ratio": 1.0025954350168915,
+        "affected_top1_agreement": 0.978494623655914,
+        "run_length": 1,
+        "tokens_affected": 186
+      },
+      {
+        "affected_large_divergence_fraction": 0.0,
+        "affected_mean_forward_kl": 0.005333581926821861,
+        "affected_perplexity_ratio": 0.9971383060266706,
+        "affected_top1_agreement": 0.9623655913978495,
+        "run_length": 2,
+        "tokens_affected": 186
+      },
+      {
+        "affected_large_divergence_fraction": 0.0,
+        "affected_mean_forward_kl": 0.007274458743131129,
+        "affected_perplexity_ratio": 1.0065699246293978,
+        "affected_top1_agreement": 0.9838709677419355,
+        "run_length": 4,
+        "tokens_affected": 186
+      },
+      {
+        "affected_large_divergence_fraction": 0.0,
+        "affected_mean_forward_kl": 0.0133326167155618,
+        "affected_perplexity_ratio": 0.9901272516288889,
+        "affected_top1_agreement": 0.9354838709677419,
+        "run_length": 8,
+        "tokens_affected": 186
+      }
+    ],
+    "hypothesis": "Q1B",
+    "kill_signal": {
+      "frequent_large_divergence_at_lowest_l": false,
+      "kill": false,
+      "lowest_l": 1
+    },
+    "marginals": [
+      {
+        "delta_l": 1,
+        "from_l": 1,
+        "per_layer_marginal_kl": 0.0012604213151980632,
+        "to_l": 2
+      },
+      {
+        "delta_l": 2,
+        "from_l": 2,
+        "per_layer_marginal_kl": 0.0009704384081546339,
+        "to_l": 4
+      },
+      {
+        "delta_l": 4,
+        "from_l": 4,
+        "per_layer_marginal_kl": 0.0015145394931076676,
+        "to_l": 8
+      }
+    ],
+    "policy": "null",
+    "positioning": "mass_omission",
+    "primary_scope": {
+      "conditional_on": "affected_tokens",
+      "experts_per_drop": 1,
+      "headline_run_length": 8,
+      "incidence": 0.009,
+      "mechanism": "additive_residual",
+      "policy": "null",
+      "positioning": "mass_omission",
+      "run_lengths": [
+        1,
+        2,
+        4,
+        8
+      ]
+    },
+    "stage": "null_drop_mechanism",
+    "stop_triggered": false,
+    "thresholds": {
+      "large_divergence_kl": 2.0,
+      "large_divergence_max_fraction": 0.01,
+      "max_superlinear_marginal_ratio": 3.0,
+      "monotone_required_in_l": true
+    },
+    "verdicts": {
+      "headline_l_large_divergence_fraction": 0.0,
+      "large_divergence_at_headline_l": false,
+      "monotone_in_l": true,
+      "superlinear_marginal_blowup": false,
+      "superlinear_marginal_ratio": 1.2016136785735587
+    }
+  },
+  "hypothesis": "Q1B",
+  "stage": "null_drop_mechanism"
+}

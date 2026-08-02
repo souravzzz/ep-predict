@@ -1,6 +1,7 @@
 # Q1B protocol: null-drop mechanism probe (intrinsic cost, additive in depth?)
 
-**Status:** draft, awaiting researcher freeze
+**Status:** frozen; measured 2026-08-02 → **GO** (see
+`EXPERIMENT_LOG.md` and `artifacts/runs/q1-quality-erasure/analysis/q1b_null/`)
 **Track:** empirical quality measurement (closed loop back to AX4/Q2)
 **Immediate experiment:** measure how the frozen base model's quality falls
 under **null-drop** (drop a selected expert with no renormalization) as a
