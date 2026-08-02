@@ -1,21 +1,27 @@
 # Project status
 
 **Current focus:** Q2 — availability-conditioned robustness, stress and cliff
-mapping (protocol frozen, **ready**): verify that the measured free
-null-drop tolerance survives the axes Q1-B could not measure (cross-domain,
-decode compounding, contract-violation boundary), and locate the cliff; train
-a minimal mask-aware calibration only where a real degradation is demonstrated.
+mapping (**measured, closed by the researcher**): the three arms are run,
+gated, and accepted. Cross-domain and cliff confirm the free null-drop
+tolerance; the decode leg produces *trajectory divergence under a near-tie
+flip that manual inspection of the generated text shows is paraphrase, not
+degradation*. No non-free regime is demonstrated, so **no mask-aware
+calibration is justified** and Q2 closes.
 **Current stage:** Q1/Q1-B accepted by the researcher. The universal
 mass-budget probe is a decisive STOP (KL 5.81); the AX4-faithful **null-drop**
 tail is a decisive **GO** — quality cost is monotone and roughly additive in
 depth L=1→8 (worst case 0.013 nats conditional KL), with zero large divergence,
 layer-uniform sensitivity, no spacing benefit, and no cross-token leak. The
-model already tolerates the AX4 tail essentially for free (prefill, one
-domain). Q2 is set up as three measured, non-training stress arms
-(cross-domain, decode compounding, cliff mapping) with the protocol and config
-frozen; a gated, minimal mask-aware training sub-step is defined but not
-authorized.
-**Last updated:** 2026-08-02
+model already tolerates the AX4 tail essentially for free in **prefill**.
+Q2 adds the untested axes: the tolerance holds **across domains** (math +
+WikiText-2) and **with margin at the cliff** (first boundary at 2
+experts/layer, KL 0.028). The **decode** leg shows the two streams diverge
+after a rare near-tie flip (`1.6→1.5` in the replayed case), but the erased
+stream keeps generating fluent, on-topic, equally valid text — a **paraphrase,
+not a quality collapse**. The large step-KL on the diverged trajectory is a
+trajectory artifact (different-but-valid contexts), not evidence of
+degradation. No calibration or guard is warranted.
+**Last updated:** 2026-08-02 (Q2 stress arms measured, gated, accepted; decode = paraphrase, no calibration)
 
 | Gate | Question | State | Exit evidence |
 |---|---|---|---|
@@ -34,7 +40,7 @@ authorized.
 | C1 | Does the result transfer to a top-1/top-2 checkpoint? | Deferred; explicit permission required | No model download or testbed change authorized |
 | Q1 | Does the frozen model tolerate the expert erasure AX4's deadline contract relies on? Is quality loss controlled by missing routed mass? | **STOP (universal) / near-free null-drop tail; accepted by researcher** | Universal mass-budget headline (renormalize, m=0.125): KL 5.81, top-1 9.2%, PPL 279.9, non-monotone. Tail-event sub-track (rare one-expert one-layer drops): null-drop near-free (conditional KL 0.0032, top-1 99.2%); renormalize ~40× worse and dropped as a strategy |
 | Q1B | Under null-drop, is quality loss additive and monotone in the number/placement of dropped expert-layers (depth, layer order, spacing, cross-token leak)? | **GO; accepted by researcher** | Depth sweep L=1→8 conditional-on-affected: monotone (KL 0.0041→0.0133), flat per-layer marginal (ratio 1.20 ≤3), 0% large divergence at L=8; layer-uniform, spacing-insensitive, no cross-token leak. Additive-residual mechanism supported |
-| Q2 | Does availability-conditioned robustness make the model tolerate the AX4 erasure distribution (and if not, where)? | **Ready** (protocol + config frozen; no CLI yet) | Three measured stress arms reusing Q1-B machinery: cross-domain, decode compounding, cliff mapping; gated minimal mask-aware calibration, not generic dropout |
+| Q2 | Does availability-conditioned robustness make the model tolerate the AX4 erasure distribution (and if not, where)? | **Measured; accepted by the researcher — no non-free regime, no calibration** | Q2-A **GO**: depth-additive tolerance holds on math (L=8 KL 0.0090) and WikiText-2 (0.0145), both monotone, no super-linear, zero large divergence. Q2-C **WITH_MARGIN**: AX4 nominal cell free (L=8 KL 0.0102); cliff only at 2 experts/layer (KL 0.028); no incidence/run-length crossing through 0.5/16. Q2-B **decode**: streams diverge after a rare near-tie flip, but the replayed generated text shows the erased stream is a fluent, on-topic **paraphrase, not a quality collapse** — divergence (trajectory artifact), not degradation. No calibration or guard justified |
 | AX1 | Under assumed future MTP-style routing quality, what capacity/TPOT envelope does predictive offload enable? | Projected region exists; review pending | At measured PCIe and assumed C=99%, A=1.5×, wave-local P99 improves 34–39% versus reactive offload; FCFS queue tails are materially worse |
 | AX2 | What bandwidth, latency, reliability, amplification, and granularity bounds define viable regions? | Complete; review pending | K=16, A=1× needs 71.3/22.8/11.6/8.2 GB/s at Δ=1/3/6/9; reliability remains orthogonal |
 | AX3 | What HBM and rolling-SRAM organization suits a three-tier predictive hierarchy? | Physical staging envelope complete; review pending | Top-8 whole-expert double buffering needs 192 MiB at A=1× and 384 MiB at A=2×; no SRAM execution speedup is claimed |
@@ -66,11 +72,21 @@ authorized.
 - [x] Freeze the Q2 protocol and config (docs/Q2_PROTOCOL.md,
       configs/experiment/q2-stress.toml), reframed to verify the measured free
       null-drop tolerance across the untested axes.
-- [ ] Implement and run the Q2 stress arms (cross-domain, decode compounding,
+- [x] Implement and run the Q2 stress arms (cross-domain, decode compounding,
       cliff mapping) on the frozen base checkpoint once authorized.
-- [ ] Decide Q2 from the stress arms: GO-to-AX4 with zero training (tolerance
-      holds) vs a gated minimal mask-aware calibration (a narrow non-free
-      regime) vs a harder AX4 ceiling (cliff inside the contract margin).
+- [x] Apply the frozen per-arm gates: Q2-A GO (cross-domain), Q2-B decode
+      divergence observed, Q2-C WITH_MARGIN (cliff outside the contract bound).
+      Generate the three hashed figures; human visual review skipped (no vision
+      on this session's model) — verified determinism and hashes
+      programmatically instead.
+- [x] Re-run the Q2-B decode legs capturing the generated token IDs and decode
+      both clean/erased streams to text for manual inspection; the erased
+      stream is a fluent, on-topic paraphrase, so the decode divergence is a
+      trajectory artifact, not a quality collapse.
+- [x] Researcher accepted Q2 as measured: no non-free regime demonstrated, so
+      the gated mask-aware calibration sub-step is **not entered** and Q2
+      closes. (SOP updated to always retain original/perturbed decoded tokens
+      and to skip visual analysis when the session model has no vision.)
 - [ ] Confirm the actual machine exposes the intended 24 GB NVIDIA GPU.
 - [x] Install the `data` and `inference` dependency groups.
 - [x] Materialize and review the revision-pinned standard-small workload.

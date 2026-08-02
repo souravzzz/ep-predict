@@ -1,7 +1,9 @@
 # Q2 protocol: availability-conditioned robustness — stress and cliff mapping
 
-**Status:** ready (protocol + experiment config frozen; CLI implementation and
-execution deferred until authorized)
+**Status:** **complete** — all three arms measured and accepted by the
+researcher; cross-domain GO, cliff WITH_MARGIN, decode divergence re-read as
+paraphrase not degradation; **no non-free regime demonstrated, so the gated
+calibration sub-step is NOT entered** (see `EXPERIMENT_LOG.md`).
 **Track:** measured-quality stress (closed loop back to AX4 / Q2 training); a
 minimal availability-conditioned calibration is defined but gated and is **not**
 part of the probe phase

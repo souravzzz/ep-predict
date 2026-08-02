@@ -78,10 +78,12 @@ Q1-B mapped the mechanism: quality cost is monotone and roughly additive in the
 number of dropped expert-layers (worst case L=8 is 0.013 nats conditional KL,
 zero large divergence), layer-uniform, spacing-insensitive, and local — direct
 support for the additive-residual hypothesis, and the first point where AX4's
-bounded-run quality contract is *measured* rather than assumed. Q2 (ready)
-verifies that tolerance across the untested axes (cross-domain, decode
-compounding, cliff mapping) and only then considers a minimal mask-aware
-calibration. See [docs/Q2_PROTOCOL.md](docs/Q2_PROTOCOL.md) and the
+bounded-run quality contract is *measured* rather than assumed. Q2 (complete)
+verified that tolerance across the untested axes (cross-domain, decode
+compounding, cliff mapping): it holds across prose and reasoning domains, has
+margin at the cliff, and the decode divergence is a paraphrasing artifact, not
+degradation — so **no mask-aware calibration is warranted**. See
+[docs/Q2_PROTOCOL.md](docs/Q2_PROTOCOL.md) and the
 [Q1-B report](artifacts/runs/q1-quality-erasure/analysis/q1b_null/NULL_REPORT.md).
 
 The active experiment queue, insight-mining questions, and visualization

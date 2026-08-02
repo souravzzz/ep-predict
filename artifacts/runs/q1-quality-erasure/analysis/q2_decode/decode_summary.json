@@ -1,0 +1,17 @@
+{
+  "incidence": 0.009,
+  "max_new_tokens": 64,
+  "per_run_length": {
+    "1": {
+      "final_cumulative_kl": 3.706224433379279,
+      "mean_step_kl": 3.706224433379279,
+      "token_agreement": 0.625
+    },
+    "8": {
+      "final_cumulative_kl": 4.546654906927002,
+      "mean_step_kl": 4.546654906927002,
+      "token_agreement": 0.625
+    }
+  },
+  "prefix_tokens": 256
+}

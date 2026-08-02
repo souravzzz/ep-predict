@@ -398,6 +398,37 @@ def _plot_q1b(args: argparse.Namespace) -> int:
     return 0
 
 
+def _measure_q2(args: argparse.Namespace) -> int:
+    from ep_predict.hardware.q2 import measure_q2
+
+    result = measure_q2(
+        load_toml(args.model_config),
+        load_toml(args.experiment_config),
+        limit=args.limit,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _analyze_q2(args: argparse.Namespace) -> int:
+    from ep_predict.analysis.q2 import analyze_q2
+
+    summary = analyze_q2(load_toml(args.config))
+    print(json.dumps(summary, indent=2, sort_keys=True))
+    return 0
+
+
+def _plot_q2(args: argparse.Namespace) -> int:
+    from ep_predict.visualize.q2 import plot_q2
+
+    manifest = plot_q2(
+        load_toml(args.config),
+        output_dir=args.output,
+    )
+    print(json.dumps(manifest, indent=2, sort_keys=True))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ep-predict",
@@ -715,6 +746,36 @@ def build_parser() -> argparse.ArgumentParser:
     q1b_plot_parser.add_argument("--config", required=True, type=Path)
     q1b_plot_parser.add_argument("--output", type=Path)
     q1b_plot_parser.set_defaults(function=_plot_q1b)
+
+    q2_measure_parser = subparsers.add_parser(
+        "measure-q2",
+        help="run the Q2 stress arms (cross-domain, decode, cliff) on the base model",
+    )
+    q2_measure_parser.add_argument("--model-config", required=True, type=Path)
+    q2_measure_parser.add_argument(
+        "--experiment-config", required=True, type=Path
+    )
+    q2_measure_parser.add_argument(
+        "--limit",
+        type=int,
+        help="process only the first N token chunks per arm for a smoke test",
+    )
+    q2_measure_parser.set_defaults(function=_measure_q2)
+
+    q2_parser = subparsers.add_parser(
+        "analyze-q2",
+        help="apply the frozen Q2 stress-arm gates",
+    )
+    q2_parser.add_argument("--config", required=True, type=Path)
+    q2_parser.set_defaults(function=_analyze_q2)
+
+    q2_plot_parser = subparsers.add_parser(
+        "plot-q2",
+        help="generate the Q2 cross-domain, decode, and cliff figures",
+    )
+    q2_plot_parser.add_argument("--config", required=True, type=Path)
+    q2_plot_parser.add_argument("--output", type=Path)
+    q2_plot_parser.set_defaults(function=_plot_q2)
 
     audit_parser = subparsers.add_parser(
         "audit-artifacts",

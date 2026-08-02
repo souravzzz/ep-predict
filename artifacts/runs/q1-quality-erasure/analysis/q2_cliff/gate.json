@@ -1,0 +1,31 @@
+{
+  "ax4_nominal": {
+    "affected_mean_forward_kl": 0.010229129659672898,
+    "experts_per_drop": 1,
+    "free": true,
+    "incidence": 0.009,
+    "run_length": 8
+  },
+  "cliffs": {
+    "experts_per_layer": {
+      "affected_mean_forward_kl": 0.027592444736059877,
+      "axis": "experts_per_layer",
+      "crossing_at": 2.0,
+      "experts_per_drop": 2,
+      "incidence": 0.009,
+      "run_length": 8
+    },
+    "incidence": null,
+    "run_length": null
+  },
+  "free_band_max_kl": 0.02,
+  "hypothesis": "Q2-C",
+  "interpretation": "the free band holds at the AX4 nominal cells; cliffs sit beyond them, so the measured contract stands with margin.",
+  "margins_over_ax4_nominal": {
+    "experts_per_layer": 2.0,
+    "incidence": null,
+    "run_length": null
+  },
+  "reading": "WITH_MARGIN",
+  "stage": "cliff_mapping"
+}

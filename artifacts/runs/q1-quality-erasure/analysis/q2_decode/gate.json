@@ -1,0 +1,42 @@
+{
+  "decision": "CANDIDATE_ROBUSTNESS_TARGET",
+  "hypothesis": "Q2-B",
+  "per_run_length": {
+    "1": {
+      "early_window_mean_kl": 0.0005190025467345372,
+      "final_cumulative_kl": 3.706224433379279,
+      "late_early_ratio": 18620.769265551095,
+      "late_window_mean_kl": 9.682847440242767,
+      "mean_step_kl": 3.706224433379279,
+      "pass": false,
+      "runaway": true,
+      "token_agreement": 0.625
+    },
+    "8": {
+      "early_window_mean_kl": 0.0008642504226372694,
+      "final_cumulative_kl": 4.546654906927002,
+      "late_early_ratio": 14019.512991873873,
+      "late_window_mean_kl": 12.130389541387558,
+      "mean_step_kl": 4.546654906927002,
+      "pass": false,
+      "runaway": true,
+      "token_agreement": 0.625
+    }
+  },
+  "primary_scope": {
+    "experts_per_drop": 1,
+    "incidence": 0.009,
+    "max_new_tokens": 64,
+    "run_lengths": [
+      1,
+      8
+    ]
+  },
+  "runaway_detected": true,
+  "stage": "decode_compounding",
+  "thresholds": {
+    "max_mean_step_kl": 0.05,
+    "min_token_agreement": 0.8,
+    "runaway_late_early_ratio": 3.0
+  }
+}

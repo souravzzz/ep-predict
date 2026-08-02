@@ -1,0 +1,16 @@
+{
+  "domains": {
+    "math": {
+      "l8_affected_large_divergence_fraction": 0.0,
+      "l8_affected_mean_forward_kl": 0.009035209827851104,
+      "l8_affected_top1_agreement": 0.978494623655914,
+      "tokens_affected": 186
+    },
+    "ref_wikitext2": {
+      "l8_affected_large_divergence_fraction": 0.0,
+      "l8_affected_mean_forward_kl": 0.014512523928637146,
+      "l8_affected_top1_agreement": 0.9498207885304659,
+      "tokens_affected": 279
+    }
+  }
+}

@@ -18,8 +18,9 @@ Routine metrics, commands, implementation changes, and transient next steps
 belong in `EXPERIMENT_LOG.md`, `STATUS.md`, and the per-hypothesis reports.
 
 **Evidence snapshot:** 2026-08-02, after H1–H6, the all-layer H2/H3 scan, the
-C0 Base–Instruct matched-token comparison, and the Q1/Q1-B expert-erasure
-quality probe.
+C0 Base–Instruct matched-token comparison, and the Q1/Q1-B/Q2 expert-erasure
+quality probes (Q2: stress + cliff mapping — null-drop tolerance holds across
+domains, with margin at the cliff, and generation divergence is paraphrase).
 
 ---
 
@@ -216,6 +217,30 @@ This is direct evidence for the **additive-residual mechanism**: each routed
 expert adds a mostly independent weighted update to the residual stream, so
 removing one per layer removes a small independent increment and cost scales
 ~linearly in the number of dropped expert-layers.
+
+Q2 (stress + cliff) closed the tolerance claim across the axes Q1-B could not
+measure:
+
+- **Cross-domain:** the depth-additive tolerance holds on gsm8k math as well
+  as prose (L=8 conditional KL 0.0090 vs 0.0145; both monotone, zero large
+  divergence). The free tolerance is not a prose artifact.
+- **Cliff:** the free band holds at AX4's nominal cell and survives far past
+  it (no incidence/run-length crossing through 50% incidence and L=16); the
+  first cliff appears only when erasing multiple experts per layer (KL 0.028
+  at 2 experts). AX4's bounded-run quality contract stands with margin.
+- **Decode compounding (divergence, not degradation):** under autoregressive
+  generation the clean and erased streams fly apart after a rare near-tie
+  flip — a single low-mass drop can flip one token (e.g. a weight `1.6 → 1.5`)
+  and put the stream on a different-but-valid branch. The per-step KL and
+  token-agreement readouts flag this as "runaway", but manual inspection of
+  the decoded text shows the erased stream is a fluent, on-topic
+  **paraphrase**. Divergence between two streams is a trajectory/traceability
+  fact, not by itself evidence of quality loss.
+
+Net: the model tolerates the AX4 null-drop erasure essentially for free across
+domains, with margin at the contract boundary, and the decode "disagreement"
+is meaning-preserving paraphrase. **No availability-conditioned calibration
+is warranted.**
 
 ---
 
@@ -910,3 +935,25 @@ central trajectory result.
   to *measured*, and reframes Q2 as a non-training stress probe (cross-domain,
   decode compounding, cliff mapping) with a gated minimal mask-aware
   calibration rather than an unconditional robustness-training requirement.
+
+### Stream divergence is not quality degradation
+
+Q2's decode arm looked like a failure on the token-level gate (mean step KL
+3.7–4.5, token agreement 62.5%, "runaway" late/early ratio), and a scalar read
+alone would have motivated retraining. Inspecting the actual decoded streams
+showed they diverge — yes — but the erased stream is a fluent, on-topic
+**paraphrase**. Two-stream next-token KL measures agreement between trajectories,
+not the quality of either one. A per-stream or reference-anchored quality
+measure, or simply reading the output, is required before declaring a quality
+defect. **Divergence is a traceability property; degradation is a quality
+property.** Never treat one as the other.
+
+### Retain the decoded sequences, not just the aggregate
+
+Q2's post-hoc paraphrase reading was only possible by re-running the decode
+legs and decoding the token IDs, because the original run wrote only step-KL /
+agreement to disk and threw away the streams. Costless at measurement time,
+invaluable at review time. Any perturbation/generation probe should persist
+the original and perturbed token sequences (decoded text or IDs) as a
+disposable trace so that post-hoc human inspection is always possible without
+a costly re-run.

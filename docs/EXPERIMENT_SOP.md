@@ -29,10 +29,20 @@ decision path without adding a tracking system or notebook ceremony.
 ## 3. Collect
 
 - Write restartable request-level artifacts.
+- For any perturbation, erasure, or generation probe, retain the **original and
+  perturbed token sequences** (decoded text and/or token IDs) so that post-hoc
+  human inspection of the actual model output is always possible without
+  re-running measurement. Q2 exposed this the hard way: only step-KL/agreement
+  aggregates were saved, and interpreting the "runaway" decode divergence as
+  degradation — versus paraphrase — required re-running the legs to recover the
+  streams. Store the streams once as a disposable trace; do not reduce them to
+  a scalar at collection time.
 - Never repair raw traces in place after analysis. Routing traces, projected
   hidden features, full hidden states, and activations are local replay inputs:
   they are ignored by Git and may be discarded once the derived evidence is
-  safely committed.
+  safely committed. Original/perturbed token sequences follow the same
+  disposable, Git-ignored rule as other raw traces — persist them, then commit
+  only the derived compact tables.
 - Record environment, hardware, revisions, and request completion.
 - Keep the compact run definition, run manifest, model report, dataset
   manifest, and exact prepared prompts under `artifacts/`; these are durable
@@ -89,7 +99,15 @@ decision path without adding a tracking system or notebook ceremony.
 ## 6. Human visual-review checkpoint
 
 Pause before starting the next hypothesis. The researcher reviews the figures
-and records:
+and records. **When the working session's model cannot see images** (e.g. a
+non-vision model), do not fake or guess a visual read: skip the pixel-level
+figure review and instead run the programmatic equivalent — (a) confirm the
+figure-input hashes and manifest cover the exact tables that produced them,
+(b) recompute the machine-readable headline values from the analysis tables
+and assert they match the gate, and (c) review the underlying numbers and
+generated token streams directly. Mark the figure review note as
+"visual review skipped (no vision); verified programmatically" so the
+substitution is explicit. The checkpoint records:
 
 - whether axes, units, aggregation, baselines, and thresholds are correct;
 - whether machine-readable headline values agree with the plots;

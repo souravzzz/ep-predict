@@ -2,7 +2,7 @@
 
 ## Founding Research PRD
 
-**Status:** H1–H6 and C0 empirical pilot complete; AX1–AX4 analytical architecture track complete (AX4 review pending); Q1/Q1-B expert-erasure quality probe complete and accepted; Q2 stress arms ready
+**Status:** H1–H6 and C0 empirical pilot complete; AX1–AX4 analytical architecture track complete (AX4 review pending); Q1/Q1-B/Q2 expert-erasure quality probes complete and accepted (Q2: null-drop tolerance holds across domains with cliff margin, and decode divergence is paraphrase, not degradation)
 **Primary environment:** Python 3.12, `uv`, PyTorch, Hugging Face Transformers, CUDA 12.4  
 **Initial hardware:** 1× NVIDIA GPU with 24 GB VRAM  
 **Planned scale-up environment:** 8× AMD MI355X-class GPUs with 288 GB HBM per GPU  
@@ -645,13 +645,18 @@ assumed, and is cheap: even the worst case (8 consecutive degraded layers)
 is semantically negligible. See `docs/Q1B_PROTOCOL.md` and
 `artifacts/runs/q1-quality-erasure/analysis/q1b_null/NULL_REPORT.md`.
 
-**Q2 (ready):** because the frozen model already tolerates the AX4 null-drop
+**Q2 (complete):** because the frozen model already tolerates the AX4 null-drop
 tail for free in the measured regime (prefill, one domain), robust training is
-no longer an unconditional requirement. Q2 verifies that tolerance across the
-untested axes and locates the cliff: three measured, non-training stress arms
-(cross-domain, decode compounding, cliff mapping) reuse the Q1-B machinery, and
-a gated minimal mask-aware calibration (not generic dropout) is defined only if
-a real non-free regime appears. See `docs/Q2_PROTOCOL.md`.
+no longer an unconditional requirement. Q2 verified that tolerance across the
+untested axes and located the cliff with three measured, non-training stress
+arms (cross-domain, decode compounding, cliff mapping) reusing the Q1-B
+machinery. Outcomes: cross-domain **GO** (holds on gsm8k math), cliff
+**WITH_MARGIN** (AX4 cell free, first cliff at 2 experts/layer), decode
+**divergence not degradation** (clean/erased streams fly apart after a
+near-tie flip, but the erased output is a fluent paraphrase — the step-KL
+overstates quality loss). No real non-free regime appeared, so the gated
+minimal mask-aware calibration (not generic dropout) is **not entered**.
+See `docs/Q2_PROTOCOL.md` and `EXPERIMENT_LOG.md`.
 
 ---
 

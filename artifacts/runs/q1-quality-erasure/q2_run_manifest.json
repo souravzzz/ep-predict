@@ -1,0 +1,37 @@
+{
+  "analysis_dirs": {
+    "cliff": "artifacts/runs/q1-quality-erasure/analysis/q2_cliff",
+    "cross_domain": "artifacts/runs/q1-quality-erasure/analysis/q2_cross_domain",
+    "decode": "artifacts/runs/q1-quality-erasure/analysis/q2_decode"
+  },
+  "arms": [
+    "cross_domain",
+    "decode",
+    "cliff"
+  ],
+  "config_fingerprint": "4ac89254b1717e09aa69d23136c768e2769ba1792099c9cb4a7478c66fa2db61",
+  "environment": {
+    "git_commit": "f7daef063c138113c665d04f5acd960529b534bb",
+    "gpu": {
+      "capability": [
+        8,
+        6
+      ],
+      "device_count": 1,
+      "memory_bytes": 25425608704,
+      "name": "NVIDIA GeForce RTX 3090 Ti"
+    },
+    "packages": {
+      "accelerate": "1.3.0",
+      "torch": "2.6.0",
+      "transformers": "5.14.1"
+    },
+    "platform": "Linux-6.2.0-39-generic-x86_64-with-glibc2.35",
+    "python": "3.12.9",
+    "torch_cuda_version": "12.4",
+    "transformers_version": "5.14.1"
+  },
+  "run_id": "q1-quality-erasure",
+  "stage": "q2_stress",
+  "state": "complete"
+}

@@ -1,0 +1,89 @@
+{
+  "broken_domains": [],
+  "decision": "GO",
+  "decision_note": "A broken domain is a candidate robustness target, reported explicitly and non-gating for the overall Q2 decision.",
+  "hypothesis": "Q2-A",
+  "per_domain": {
+    "math": {
+      "depth": [
+        {
+          "affected_mean_forward_kl": 0.0013147251231731066,
+          "affected_top1_agreement": 0.978494623655914,
+          "run_length": 1
+        },
+        {
+          "affected_mean_forward_kl": 0.002339269967764736,
+          "affected_top1_agreement": 0.978494623655914,
+          "run_length": 2
+        },
+        {
+          "affected_mean_forward_kl": 0.005360721674327168,
+          "affected_top1_agreement": 0.978494623655914,
+          "run_length": 4
+        },
+        {
+          "affected_mean_forward_kl": 0.009035209827851104,
+          "affected_top1_agreement": 0.978494623655914,
+          "run_length": 8
+        }
+      ],
+      "headline_kl": 0.009035209827851104,
+      "headline_l=8_large_divergence_fraction": 0.0,
+      "large_divergence_at_headline_l": false,
+      "monotone_in_l": true,
+      "superlinear_marginal_blowup": false,
+      "superlinear_marginal_ratio": 0.8966147682360699,
+      "tokens_affected": 186
+    },
+    "ref_wikitext2": {
+      "depth": [
+        {
+          "affected_mean_forward_kl": 0.003489132949708557,
+          "affected_top1_agreement": 0.967741935483871,
+          "run_length": 1
+        },
+        {
+          "affected_mean_forward_kl": 0.0058511254681427845,
+          "affected_top1_agreement": 0.978494623655914,
+          "run_length": 2
+        },
+        {
+          "affected_mean_forward_kl": 0.008510157372468689,
+          "affected_top1_agreement": 0.974910394265233,
+          "run_length": 4
+        },
+        {
+          "affected_mean_forward_kl": 0.014512523928637146,
+          "affected_top1_agreement": 0.9498207885304659,
+          "run_length": 8
+        }
+      ],
+      "headline_kl": 0.014512523928637146,
+      "headline_l=8_large_divergence_fraction": 0.0,
+      "large_divergence_at_headline_l": false,
+      "monotone_in_l": true,
+      "superlinear_marginal_blowup": false,
+      "superlinear_marginal_ratio": 0.6353075326575807,
+      "tokens_affected": 279
+    }
+  },
+  "policy": "null",
+  "positioning": "mass_omission",
+  "primary_scope": {
+    "conditional_on": "affected_tokens",
+    "domains": [
+      "math",
+      "ref_wikitext2"
+    ],
+    "experts_per_drop": 1,
+    "headline_run_length": 8,
+    "incidence": 0.009
+  },
+  "stage": "cross_domain",
+  "thresholds": {
+    "large_divergence_kl": 2.0,
+    "large_divergence_max_fraction": 0.01,
+    "max_superlinear_marginal_ratio": 3.0,
+    "monotone_required_in_l": true
+  }
+}

@@ -1,8 +1,7 @@
-# Q2 availability-conditioned robustness — stress and cliff mapping (READY).
+# Q2 availability-conditioned robustness — stress and cliff mapping (READY,
+# configuration adjusted for locally materialized domains).
 # Measured forward passes on the frozen base checkpoint; NO training, NO model
-# download, NO second checkpoint. Follows docs/Q2_PROTOCOL.md (frozen). The
-# CLI subcommands (measure/analyze/plot-q2-*) are NOT yet implemented; this
-# file freezes the experiment definition until implementation is authorized.
+# download, NO second checkpoint. Follows docs/Q2_PROTOCOL.md (frozen).
 #
 # Prerequisite: Q1 (STOP universal) + Q1-B (GO null-drop tail) accepted.
 # Strategy: null-drop only; renormalize remains dropped. Three arms reusing
@@ -12,6 +11,11 @@ run_dir = "artifacts/runs/q1-quality-erasure"
 seed = 7
 
 # Arm A: cross-domain tolerance — repeat the Q1-B depth sweep on other domains.
+# Domains are materialized from LOCAL data only (no download). WikiText-2 is
+# the Q1-B in-family reference; gsm8k word problems provide the math/reasoning
+# domain. "code" was not locally cached as a parquet, so it is omitted; the
+# protocol requires at least one additional domain (code OR math), which math
+# satisfies.
 [q2_cross_domain_probe]
 output_dir = "artifacts/runs/q1-quality-erasure/analysis/q2_cross_domain"
 policy = "null"
@@ -19,9 +23,12 @@ positioning = "mass_omission"
 incidence = 0.009                 # AX4 anchor
 depth_run_lengths = [1, 2, 4, 8]  # AX4 worst case = 8
 experts_per_drop = 1
-# One or more additional domains materialized from local data (code and/or
-# math/reasoning); the Q1-B WikiText-2 values are the in-family reference.
-domains = ["ref_wikitext2", "code", "math"]
+token_budget = 16384              # in-family Q1-B budget per domain
+chunk_size = 512
+domains = ["ref_wikitext2", "math"]
+[domains_sources]
+ref_wikitext2 = "~/.cache/huggingface/hub/datasets--wikitext/snapshots/b08601e04326c79dfdd32d625aee71d232d685c3/wikitext-2-raw-v1/validation-00000-of-00001.parquet"
+math = "~/.cache/huggingface/hub/datasets--gsm8k/snapshots/e53f048856ff4f594e959d75785d2c2d37b678ee/main/train-00000-of-00001.parquet"
 
 # Arm B: decode compounding — larger autoregressive continuation under the tail.
 [q2_decode_probe]
@@ -32,7 +39,12 @@ incidence = 0.009
 experts_per_drop = 1
 run_lengths = [1, 8]              # free single-drop and AX4 worst case
 max_new_tokens = 64               # enough steps to expose compounding
-prefix_tokens = 64
+# Prefix lengthened (vs earlier 64) so a handful of affected tokens actually
+# occur at the rare 0.9% tail (expected ~0.009*320 ~ 2.9) — otherwise the
+# compounding leg can be vacuous (zero affected tokens, zero divergence).
+prefix_tokens = 256
+token_budget = 4096               # for the reference prefix selection
+cell_seed = 5007
 
 # Arm C: cliff mapping — push erasure past AX4's bound to locate the cliff.
 [q2_cliff_probe]
@@ -41,14 +53,14 @@ policy = "null"
 positioning = "mass_omission"
 incidence = 0.009
 experts_per_drop = 1
+token_budget = 16384
+chunk_size = 512
 # Incidence beyond AX4's ~0.9%: toward the universal mass-budget neighborhood.
 incidence_sweep = [0.009, 0.02, 0.05, 0.1, 0.3, 0.5]
 # Runs beyond the AX4 8-layer cap.
 run_length_sweep = [8, 12, 16]
 # Multiple experts dropped per layer, past the single low-mass expert.
 experts_per_layer_sweep = [1, 2, 4]
-# Response-surface reporting threshold marking the "free" band.
-free_band_max_kl = 0.02           # conditional-on-affected nats
 
 # Shared frozen quality readouts.
 [quality_readouts]
@@ -58,3 +70,28 @@ perplexity_ratio = true
 large_divergence_kl = 2.0
 large_divergence_max_fraction = 0.01
 monotone_slack = 1e-6
+
+# ---------------------------------------------------------------------------
+# Frozen per-arm gates (derived from docs/Q2_PROTOCOL.md)
+# ---------------------------------------------------------------------------
+
+# Q2-A: same additive-residual criteria as Q1-B, applied per domain at L=8.
+[q2_cross_domain_gate]
+headline_run_length = 8
+max_superlinear_ratio = 3.0
+large_divergence_kl = 2.0
+large_divergence_max_fraction = 0.01
+monotone_slack = 1e-6
+
+# Q2-B: the erased continuation stays coherent over generation.
+[q2_decode_gate]
+min_token_agreement = 0.80
+max_mean_step_kl = 0.05
+runaway_late_early_ratio = 3.0
+
+# Q2-C: locates the cliff and checks it against AX4's nominal bound.
+[q2_cliff_gate]
+free_band_max_kl = 0.02          # conditional-on-affected nats
+ax4_nominal_incidence = 0.009
+ax4_nominal_run_length = 8
+ax4_nominal_experts = 1

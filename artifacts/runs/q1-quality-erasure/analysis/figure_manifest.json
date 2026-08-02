@@ -1,0 +1,52 @@
+{
+  "analysis": "q2_stress",
+  "arms": [
+    {
+      "analysis": "q2_cross_domain",
+      "decision": "GO",
+      "outputs": {
+        "artifacts/runs/q1-quality-erasure/analysis/q2_cross_domain/figures_q2a/FIGURES.md": "e35fdc44bafe173cb8c51bc7e42a8acaebf62b45148492c567edff781c168704",
+        "artifacts/runs/q1-quality-erasure/analysis/q2_cross_domain/figures_q2a/fig1_q2_cross_domain.pdf": "fbf0b9ad3821495d0b37ff8ff69ad8020c3e422087725c305f4c26487472d3da",
+        "artifacts/runs/q1-quality-erasure/analysis/q2_cross_domain/figures_q2a/fig1_q2_cross_domain.png": "2472f99537c6ebe90f6b8d2377aeeac51bd207945a36b1f1b8a8057dcb91ec80"
+      }
+    },
+    {
+      "analysis": "q2_decode",
+      "decision": "CANDIDATE_ROBUSTNESS_TARGET",
+      "outputs": {
+        "artifacts/runs/q1-quality-erasure/analysis/q2_decode/figures_q2b/FIGURES.md": "e1658a5a1f68d4ce7a2fd89e9310b4227df82ab94d9f6b9114eae5863b77a4e3",
+        "artifacts/runs/q1-quality-erasure/analysis/q2_decode/figures_q2b/fig1_q2_decode.pdf": "0936162be0537e24a19e11e78d94274818fe319fb0cf60fdd10937d5c240569d",
+        "artifacts/runs/q1-quality-erasure/analysis/q2_decode/figures_q2b/fig1_q2_decode.png": "529a99b97106e1595caaa29c999645c025716d036433f4de548f0e827949ae49"
+      }
+    },
+    {
+      "analysis": "q2_cliff",
+      "outputs": {
+        "artifacts/runs/q1-quality-erasure/analysis/q2_cliff/figures_q2c/FIGURES.md": "a3ad9283aca0781e46c6cbed6fdbfe6553aa2cceb1468bd9a343ef5321470389",
+        "artifacts/runs/q1-quality-erasure/analysis/q2_cliff/figures_q2c/fig1_q2_cliff.pdf": "aa4e642e3da4321bf0269ba89df0b18a7611e962137f042763808401f312037e",
+        "artifacts/runs/q1-quality-erasure/analysis/q2_cliff/figures_q2c/fig1_q2_cliff.png": "629986f302fd89005033b2368a728ac11b1105aa04f3d15cceee5dd8ac02141a"
+      },
+      "reading": "WITH_MARGIN"
+    }
+  ],
+  "human_review_complete": false,
+  "inputs": {
+    "artifacts/runs/q1-quality-erasure/analysis/q2_cliff/cliff_surface.csv": "507d118323f4c828bafe8ab243de996ac88c5133fd393b96639c0ddce3d459d5",
+    "artifacts/runs/q1-quality-erasure/analysis/q2_cliff/gate.json": "ca600f77cfdbd8290483df092bf89ccb2efd84dbeba9422def79e62a420f4a94",
+    "artifacts/runs/q1-quality-erasure/analysis/q2_cross_domain/depth_by_domain.csv": "bd7082cf4a951c9b7ab362aea30c873b5ce66ff2f77b93db9ce5af03b5a5f462",
+    "artifacts/runs/q1-quality-erasure/analysis/q2_cross_domain/gate.json": "b9ff24dbad64024e4b0c81019a8fff638bad5249c968cbf6fc398abcd6aff757",
+    "artifacts/runs/q1-quality-erasure/analysis/q2_decode/continuation.csv": "5bc0cfd47fd8754d87b72c72241b3cb639df123fd571a9f3ee25776a8286d793",
+    "artifacts/runs/q1-quality-erasure/analysis/q2_decode/gate.json": "302fe05da69b7a0d75daf0048125fe4db3980dfffdc0384bc6e29d23c00e0ed9"
+  },
+  "outputs": {
+    "artifacts/runs/q1-quality-erasure/analysis/q2_cliff/figures_q2c/FIGURES.md": "a3ad9283aca0781e46c6cbed6fdbfe6553aa2cceb1468bd9a343ef5321470389",
+    "artifacts/runs/q1-quality-erasure/analysis/q2_cliff/figures_q2c/fig1_q2_cliff.pdf": "aa4e642e3da4321bf0269ba89df0b18a7611e962137f042763808401f312037e",
+    "artifacts/runs/q1-quality-erasure/analysis/q2_cliff/figures_q2c/fig1_q2_cliff.png": "629986f302fd89005033b2368a728ac11b1105aa04f3d15cceee5dd8ac02141a",
+    "artifacts/runs/q1-quality-erasure/analysis/q2_cross_domain/figures_q2a/FIGURES.md": "e35fdc44bafe173cb8c51bc7e42a8acaebf62b45148492c567edff781c168704",
+    "artifacts/runs/q1-quality-erasure/analysis/q2_cross_domain/figures_q2a/fig1_q2_cross_domain.pdf": "fbf0b9ad3821495d0b37ff8ff69ad8020c3e422087725c305f4c26487472d3da",
+    "artifacts/runs/q1-quality-erasure/analysis/q2_cross_domain/figures_q2a/fig1_q2_cross_domain.png": "2472f99537c6ebe90f6b8d2377aeeac51bd207945a36b1f1b8a8057dcb91ec80",
+    "artifacts/runs/q1-quality-erasure/analysis/q2_decode/figures_q2b/FIGURES.md": "e1658a5a1f68d4ce7a2fd89e9310b4227df82ab94d9f6b9114eae5863b77a4e3",
+    "artifacts/runs/q1-quality-erasure/analysis/q2_decode/figures_q2b/fig1_q2_decode.pdf": "0936162be0537e24a19e11e78d94274818fe319fb0cf60fdd10937d5c240569d",
+    "artifacts/runs/q1-quality-erasure/analysis/q2_decode/figures_q2b/fig1_q2_decode.png": "529a99b97106e1595caaa29c999645c025716d036433f4de548f0e827949ae49"
+  }
+}
