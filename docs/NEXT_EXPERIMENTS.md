@@ -1,10 +1,26 @@
 # Next experiments: first-order co-design and predictable routing
 
-**Updated:** 2026-08-01  
-**Current next action:** review AX4's three figures and decide whether its
-high-bandwidth erasure contract warrants a later permission-gated training test
+**Updated:** 2026-08-02  
+**Current next action:** run Q1, the expert-erasure quality probe (frozen
+protocol in [Q1_PROTOCOL.md](Q1_PROTOCOL.md)); measure whether quality loss is
+controlled by missing routed mass before any AX4 robustness-training is
+authorized
 **Operating rule:** use the cheapest existing artifacts first; model broad
 viability and expected benefit before improving timing fidelity or predictors.
+After AX4, the decisive open question is whether low-mass deadline-induced
+omissions are semantically cheap — Q1 measures that on the frozen model before
+any training.
+
+This plan now separates four questions:
+
+1. Under what hardware and prediction assumptions is hierarchical expert
+   management analytically worthwhile? (answered by the AX track)
+2. Where do the existing transition and linear candidate streams land within
+   that design space? (H5/H6)
+3. Does the frozen model tolerate the bounded expert erasure AX4's deadline
+   contract relies on? (Q1 — the new immediate priority)
+4. Can routing later be trained to hold quality under that erasure without
+   harming loss or load balance? (deferred robustness-training, gated on Q1)
 
 This plan separates three questions that should not be conflated:
 
@@ -29,6 +45,8 @@ OLMoE or the fixed H3 predictor achieves those points. The frozen design is in
 | AX2 | How do bandwidth, latency, coverage, amplification, and transfer granularity divide the design space? | No | Complete; inverse bounds and phase map generated |
 | AX3 | What local-HBM and rolling-SRAM capacities suit a multi-horizon three-tier hierarchy? | No | Complete; physical staging envelope generated |
 | AX4 | Can hard-deadline expert erasure produce a tight low-batch TPOT bound with a plausible quality-robustness contract? | No for completed replay; later training requires permission | Complete; analytical gate passes only in a high-bandwidth mass-priority regime, review pending |
+| Q1 | Does the frozen model tolerate the expert erasure AX4's deadline contract relies on? Is quality loss controlled by missing routed mass? | Yes; forward passes on frozen base model, no training | **Frozen** protocol; awaiting implementation |
+| Q2 | Can availability-conditioned robustness training make the model tolerate the AX4 erasure distribution without harming loss/load balance? | Yes; small intervention | Deferred; gated on Q1 GO |
 | H5-A | What prediction × hardware combinations create a first-order profitability window? | No | Complete; region exists |
 | H5-B | What minimum predictor quality is required at each capacity, bandwidth, and lookahead? | No; derived from H5-A | Complete |
 | H5-C | How much analytical oracle benefit do the existing transition and linear streams recover? | No retraining; reconstruct existing predictions | Complete; raw streams fail traffic gate |
@@ -178,6 +196,64 @@ telemetry. Transfers that miss commit cannot delay dispatch.
 The immediate next step is human review of the three figures and evidence
 boundary. Do not start erasure training, inference collection, or a new model
 without explicit permission.
+
+## Q1 — Expert-erasure quality probe (active)
+
+**Updated:** 2026-08-02. Frozen protocol:
+[Q1_PROTOCOL.md](Q1_PROTOCOL.md).
+
+### Decisive question
+
+After AX4, the project's decisive open question is whether low-mass,
+deadline-induced expert omissions can be made semantically cheap enough to
+convert prediction into a hard latency guarantee. AX4 passes only
+conditionally on the model tolerating bounded missing routed mass. Q1 measures
+that tolerance directly on the frozen base checkpoint.
+
+### Immediate design (frozen)
+
+- **Checkpoint/dataset:** base `OLMoE-1B-7B-0125` over WikiText-2; forward
+  passes only, no training, no second checkpoint.
+- **Primary scope (gating):** prefill quality probe with paired same-token
+  deltas — per-token forward KL, top-1 agreement, perplexity ratio — as a
+  function of missing routed mass `m_missing`.
+- **Policies:** renormalize (primary) and null-drop (lower bound), matched at
+  equal `m_missing`. Shared-residual is excluded from the measured probe (the
+  base model has no shared expert) and stays paper-level discussion.
+- **Erasure probes (gate):** mass-budget sweep at
+  `m ∈ {0.01, 0.05, 0.125, 0.25, 0.50}`, positioning swept across
+  mass-omission (headline), random-within-route, mass-adversarial.
+- **Correlation scan (non-gating):** layer-burst and consecutive-token-burst,
+  plus a short greedy decode leg to detect autoregressive compounding that
+  prefill structurally cannot see.
+- **Injection:** runtime MoE-forward patch (temporary in-memory mask, restored
+  after each pass; upstream model file never modified).
+- **Frozen gate (renormalize + mass-omission at headline `m=0.125`):**
+  forward-KL ≤ 0.05, top-1 agreement ≥ 99%, perplexity ratio ≤ 1.05, and
+  `ΔQ` monotone in `m_missing`. STOP/kill if sub-1% mass causes frequent large
+  divergence or non-monotone/jumpy `ΔQ`.
+
+### Steps
+
+1. Run a 1–2 request smoke test of the probe; verify the erasure patch
+   reproduces exact softmax-64→top-8→no-renormalization semantics before
+   scaling (SOP step 2).
+2. Materialize the paired table and apply the frozen gate.
+3. Generate one `ΔQ vs m_missing` curve and one positioning/correlation panel
+   with hashed inputs.
+4. Human visual review, then decide GO (proceed to Q2 robustness-training) or
+   STOP (AX4's training justification dies).
+
+## Q2 — Availability-conditioned robustness training (deferred)
+
+**Gated on Q1 GO.** Only if the frozen model tolerates the AX4 erasure
+distribution should a minimal intervention train a small fallback/calibration
+mechanism (mask-aware renormalization, small shared fallback expert, or a
+low-rank adapter) against the actual availability-mask distribution produced by
+the target hierarchy and deadline policy. Measure the Pareto tuple
+(validation loss, load balance, quality under the AX4 erasure distribution,
+modeled TPOT benefit). Generic expert-dropout robustness is explicitly not the
+target; only the trace/mass-derived distribution counts.
 
 ## H5-A — Controlled prediction × hardware sweep
 

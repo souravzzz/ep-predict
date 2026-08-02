@@ -1,10 +1,12 @@
 # Project status
 
-**Current focus:** AX4 — deadline-bounded graceful expert degradation
-**Current stage:** Complete; formal analytical gate passed under a
-mass-priority, high-bandwidth FCFS regime. Human figure review is pending; no
-training or new-model work is authorized.
-**Last updated:** 2026-08-01
+**Current focus:** Q1 — expert-erasure quality probe: does the frozen model
+tolerate the bounded missing routed mass that AX4's deadline contract relies
+on?
+**Current stage:** protocol frozen; Q1 forward-pass implementation + analysis
+pending. This is the highest-value measurement between the completed AX4
+analysis and any further (training) work.
+**Last updated:** 2026-08-02
 
 | Gate | Question | State | Exit evidence |
 |---|---|---|---|
@@ -21,6 +23,8 @@ training or new-model work is authorized.
 | H7 | Can routing be made more predictable without harming loss or balance? | Deferred after H6 failure | Requires a new mechanism and explicit permission |
 | C0 | Does post-training materially change matched-token trajectory predictability? | Pilot not supported; review pending | Base/Instruct retain 89.7% of selections; layer-0→15 conditional-gain change is +1.6 pp versus a 5 pp gate |
 | C1 | Does the result transfer to a top-1/top-2 checkpoint? | Deferred; explicit permission required | No model download or testbed change authorized |
+| Q1 | Does the frozen model tolerate the expert erasure AX4's deadline contract relies on? Is quality loss controlled by missing routed mass? | Frozen protocol; implementation pending | Prefill probe over WikiText-2; gate at m=0.125: forward-KL≤0.05, top-1≥99%, PPL ratio≤1.05, monotone ΔQ |
+| Q2 | Can availability-conditioned robustness training make the model tolerate the AX4 erasure distribution? | Deferred; gated on Q1 GO | Minimal fallback/calibration intervention, not generic dropout |
 | AX1 | Under assumed future MTP-style routing quality, what capacity/TPOT envelope does predictive offload enable? | Projected region exists; review pending | At measured PCIe and assumed C=99%, A=1.5×, wave-local P99 improves 34–39% versus reactive offload; FCFS queue tails are materially worse |
 | AX2 | What bandwidth, latency, reliability, amplification, and granularity bounds define viable regions? | Complete; review pending | K=16, A=1× needs 71.3/22.8/11.6/8.2 GB/s at Δ=1/3/6/9; reliability remains orthogonal |
 | AX3 | What HBM and rolling-SRAM organization suits a three-tier predictive hierarchy? | Physical staging envelope complete; review pending | Top-8 whole-expert double buffering needs 192 MiB at A=1× and 384 MiB at A=2×; no SRAM execution speedup is claimed |
@@ -28,7 +32,15 @@ training or new-model work is authorized.
 
 ## Immediate run checklist
 
-- [x] Confirm the actual machine exposes the intended 24 GB NVIDIA GPU.
+- [ ] Implement the Q1 probe (runtime MoE-forward patch) and its two-position
+      CLI subcommands; smoke test on 1–2 requests and verify erasure-reproduces
+      exact softmax-64→top-8→no-renormalization semantics.
+- [ ] Materialize WikiText-2 paired clean-vs-erased tables, apply the frozen
+      Q1 gate, and generate the `ΔQ vs m_missing` curve + positioning/correlation
+      panel with hashed inputs.
+- [ ] Human review the Q1 figures before deciding GO (proceed to Q2 robustness
+      training) or STOP (AX4's training justification dies).
+- [ ] Confirm the actual machine exposes the intended 24 GB NVIDIA GPU.
 - [x] Install the `data` and `inference` dependency groups.
 - [x] Materialize and review the revision-pinned standard-small workload.
 - [x] Run model inspection and retain `model_report.json`.
@@ -148,6 +160,7 @@ training or new-model work is authorized.
       erasure-robustness target before any training or new-model work.
 
 Full plan: [docs/NEXT_EXPERIMENTS.md](docs/NEXT_EXPERIMENTS.md).
+Active protocol: [docs/Q1_PROTOCOL.md](docs/Q1_PROTOCOL.md).
 Prior result: [docs/H4_RESULTS.md](docs/H4_RESULTS.md).
 Architecture protocol:
 [docs/ARCHITECTURE_EXPLORATION_PROTOCOL.md](docs/ARCHITECTURE_EXPLORATION_PROTOCOL.md).
