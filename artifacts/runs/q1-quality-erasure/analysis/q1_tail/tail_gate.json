@@ -1,0 +1,106 @@
+{
+  "decision": "STOP",
+  "hypothesis": "Q1-tail",
+  "kill_signal": {
+    "frequent_large_divergence_at_lowest_mass": false,
+    "lowest_incidence": 0.002,
+    "lowest_incidence_affected_large_frac": 0.0
+  },
+  "monotonicity": {
+    "overall_kl_by_incidence": [
+      {
+        "affected_mean_forward_kl": 0.08112492359339676,
+        "incidence": 0.002,
+        "overall_mean_forward_kl": 0.0008610370385858621
+      },
+      {
+        "affected_mean_forward_kl": 0.14636552261958385,
+        "incidence": 0.005,
+        "overall_mean_forward_kl": 0.0027170015194813812
+      },
+      {
+        "affected_mean_forward_kl": 0.12770858279073957,
+        "incidence": 0.009,
+        "overall_mean_forward_kl": 0.0032213016398130886
+      },
+      {
+        "affected_mean_forward_kl": 0.1277978680550288,
+        "incidence": 0.02,
+        "overall_mean_forward_kl": 0.008797971359003455
+      },
+      {
+        "affected_mean_forward_kl": 0.13024514806301243,
+        "incidence": 0.05,
+        "overall_mean_forward_kl": 0.014538120027751691
+      },
+      {
+        "affected_mean_forward_kl": 0.11677266548698147,
+        "incidence": 0.1,
+        "overall_mean_forward_kl": 0.02554666638494499
+      },
+      {
+        "affected_mean_forward_kl": 0.14158531479213549,
+        "incidence": 0.2,
+        "overall_mean_forward_kl": 0.04890554392289731
+      },
+      {
+        "affected_mean_forward_kl": 0.15010657996375637,
+        "incidence": 0.3,
+        "overall_mean_forward_kl": 0.06888662134447406
+      }
+    ],
+    "overall_non_decreasing_in_incidence": true,
+    "slack": 1e-06
+  },
+  "primary": {
+    "condition": "affected",
+    "mean_forward_kl": 0.12770858279073957,
+    "perplexity_ratio": 1.129639565062235,
+    "realized_incidence": 0.008316532258064516,
+    "tokens_affected": 132,
+    "tokens_total": 15872,
+    "top1_agreement": 0.8636363636363636
+  },
+  "primary_scope": {
+    "conditional_on": "affected_tokens",
+    "experts_per_drop": 1,
+    "incidence": 0.009,
+    "policy": "renormalize",
+    "positioning": "mass_omission",
+    "run_length": 1
+  },
+  "run_length_compounding": {
+    "run_kl_by_run_length": [
+      {
+        "affected_mean_forward_kl": 0.12770858279073957,
+        "affected_top1_agreement": 0.8636363636363636,
+        "run_length": 1
+      },
+      {
+        "affected_mean_forward_kl": 0.15395645553095116,
+        "affected_top1_agreement": 0.7972972972972973,
+        "run_length": 2
+      },
+      {
+        "affected_mean_forward_kl": 0.3171204617008185,
+        "affected_top1_agreement": 0.7307692307692307,
+        "run_length": 4
+      },
+      {
+        "affected_mean_forward_kl": 0.807347363103991,
+        "affected_top1_agreement": 0.644927536231884,
+        "run_length": 8
+      }
+    ]
+  },
+  "stage": "tail_event",
+  "stop_triggered": false,
+  "thresholds": {
+    "large_divergence_kl": 2.0,
+    "large_divergence_max_fraction": 0.01,
+    "max_mean_forward_kl_affected": 0.05,
+    "max_ppl_ratio_affected": 1.05,
+    "min_top1_agreement_affected": 0.99,
+    "monotone_required_incidence": true
+  }
+}

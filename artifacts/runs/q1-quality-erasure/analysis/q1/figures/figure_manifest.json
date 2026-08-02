@@ -1,0 +1,17 @@
+{
+  "analysis": "q1",
+  "decision": "STOP",
+  "human_review_complete": false,
+  "inputs": {
+    "artifacts/runs/q1-quality-erasure/analysis/q1/correlation_scan.csv": "1b145f3003241c56d363253172696bb8376f659cb4087c0f698e057d4f9e61e4",
+    "artifacts/runs/q1-quality-erasure/analysis/q1/gate.json": "c64d7e939f0b3e39419b5f7b8189c74ba1d0a6707f7a02f47f1566f807be56f2",
+    "artifacts/runs/q1-quality-erasure/analysis/q1/quality_aggregates.csv": "3b7e17c1ca602f3816494daf3c7cc5b29c5abe173b7166d26a2cead7d1fca6fb"
+  },
+  "outputs": {
+    "artifacts/runs/q1-quality-erasure/analysis/q1/figures/FIGURES.md": "0b90fa7faea59e89d238d2aa75197131d9a38b7b24fde09429247cc09a5e2a13",
+    "artifacts/runs/q1-quality-erasure/analysis/q1/figures/fig1_q1_quality_vs_missing_mass.pdf": "3326dbf9d32771d802af61a00662ed1e1fb848e85a45a33858c10b391b95e028",
+    "artifacts/runs/q1-quality-erasure/analysis/q1/figures/fig1_q1_quality_vs_missing_mass.png": "f15d64faa6c8413a61fc88cd90d2bf794a4868043ad70bc15385a1b678453095",
+    "artifacts/runs/q1-quality-erasure/analysis/q1/figures/fig2_q1_positioning_correlation.pdf": "90ddb9e01210659051ecb47597ed45a033de95416c8ebb13e278ff839275d84d",
+    "artifacts/runs/q1-quality-erasure/analysis/q1/figures/fig2_q1_positioning_correlation.png": "0ba91db5c255eb703471730b75a0754a619b0eafe4e9b9f180a97914c97f29ec"
+  }
+}

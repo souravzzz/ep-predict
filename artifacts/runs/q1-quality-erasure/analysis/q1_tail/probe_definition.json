@@ -1,0 +1,102 @@
+{
+  "config_fingerprint": "e7497a99eb0a87c505b9d19af77bfc7f5bb69e75072f2f36b4ab049ebbaf94de",
+  "experiment_config": {
+    "decision_gate": {
+      "headline_m": 0.125,
+      "headline_policy": "renormalize",
+      "headline_positioning": "mass_omission",
+      "large_divergence_kl": 2.0,
+      "large_divergence_max_fraction": 0.01,
+      "max_mean_forward_kl": 0.05,
+      "max_ppl_ratio": 1.05,
+      "min_top1_agreement": 0.99,
+      "monotone_slack": 1e-06
+    },
+    "decode_leg": {
+      "enabled": true,
+      "max_new_tokens": 24,
+      "prefix_tokens": 64
+    },
+    "output_dir": "artifacts/runs/q1-quality-erasure/analysis/q1",
+    "probe": {
+      "chunk_size": 512,
+      "mass_targets": [
+        0.01,
+        0.05,
+        0.125,
+        0.25,
+        0.5
+      ],
+      "policies": [
+        "renormalize",
+        "null"
+      ],
+      "positionings": [
+        "mass_omission",
+        "random_within_route",
+        "mass_adversarial"
+      ],
+      "token_budget": 4096
+    },
+    "run_dir": "artifacts/runs/q1-quality-erasure",
+    "run_id": "q1-quality-erasure",
+    "seed": 7,
+    "tail_gate": {
+      "experts_per_drop": 1,
+      "headline_incidence": 0.009,
+      "headline_policy": "renormalize",
+      "headline_positioning": "mass_omission",
+      "headline_run_length": 1,
+      "large_divergence_kl": 2.0,
+      "large_divergence_max_fraction": 0.01,
+      "max_mean_forward_kl": 0.05,
+      "max_ppl_ratio": 1.05,
+      "min_top1_agreement": 0.99,
+      "monotone_slack": 1e-06
+    },
+    "tail_output_dir": "artifacts/runs/q1-quality-erasure/analysis/q1_tail",
+    "tail_probe": {
+      "ax4_anchor_incidence": 0.009,
+      "chunk_size": 512,
+      "experts_per_drop": 1,
+      "headline_run_length": 1,
+      "incidence": [
+        0.002,
+        0.005,
+        0.009,
+        0.02,
+        0.05,
+        0.1,
+        0.2,
+        0.3
+      ],
+      "policies": [
+        "renormalize",
+        "null"
+      ],
+      "positioning": "mass_omission",
+      "run_lengths": [
+        1,
+        2,
+        4,
+        8
+      ],
+      "token_budget": 16384
+    }
+  },
+  "model_config": {
+    "attention_implementation": "sdpa",
+    "device": "cuda:0",
+    "dtype": "bfloat16",
+    "model_id": "allenai/OLMoE-1B-7B-0125",
+    "revision": "9b0c1aa87e34a20052389dce1f0cf01da783f654",
+    "router_name_contains": [
+      ".mlp.gate"
+    ],
+    "tokenizer_id": "allenai/OLMoE-1B-7B-0125",
+    "tokenizer_revision": "9b0c1aa87e34a20052389dce1f0cf01da783f654",
+    "trust_remote_code": false,
+    "use_cache": true
+  },
+  "semantics": "tail_event_runtime_patch_exact_expert"
+}

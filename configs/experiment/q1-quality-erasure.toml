@@ -1,0 +1,67 @@
+# Frozen Q1 expert-erasure quality probe. Forward passes on the frozen base
+# base checkpoint over WikiText-2; no training, no model download, no second
+# checkpoint. Measures whether quality loss is controlled by missing routed
+# mass (AX4's assumed-robustness contract) or by which/where experts are lost.
+run_id = "q1-quality-erasure"
+run_dir = "artifacts/runs/q1-quality-erasure"
+output_dir = "artifacts/runs/q1-quality-erasure/analysis/q1"
+tail_output_dir = "artifacts/runs/q1-quality-erasure/analysis/q1_tail"
+seed = 7
+
+[probe]
+# WikiText-2 raw validation, loaded directly from the local HF cache parquet.
+token_budget = 4096
+chunk_size = 512
+mass_targets = [0.01, 0.05, 0.125, 0.25, 0.50]
+positionings = ["mass_omission", "random_within_route", "mass_adversarial"]
+policies = ["renormalize", "null"]
+
+[decode_leg]
+enabled = true
+prefix_tokens = 64
+max_new_tokens = 24
+
+# AX4-faithful tail-event probe: only a small fraction of tokens suffer an
+# erasure, each dropping an exact expert count in a bounded run of consecutive
+# layers. This is the regime AX4's deadline contract actually relies on
+# (degraded-wave fraction ~0.9-1%), as opposed to the mass-budget probe above
+# which erases every token in every layer.
+[tail_probe]
+token_budget = 16384
+chunk_size = 512
+incidence = [0.002, 0.005, 0.009, 0.02, 0.05, 0.10, 0.20, 0.30]
+run_lengths = [1, 2, 4, 8]
+experts_per_drop = 1
+positioning = "mass_omission"
+policies = ["renormalize", "null"]
+# AX4 headline candidate: degraded-wave fraction ~0.009-0.0093.
+ax4_anchor_incidence = 0.009
+headline_run_length = 1
+
+[tail_gate]
+# Frozen tail primary cell: one expert in one layer, conditional on the tokens
+# that actually suffered erasure, at the AX4-anchored incidence.
+headline_policy = "renormalize"
+headline_positioning = "mass_omission"
+headline_incidence = 0.009
+headline_run_length = 1
+experts_per_drop = 1
+max_mean_forward_kl = 0.05
+min_top1_agreement = 0.99
+max_ppl_ratio = 1.05
+large_divergence_kl = 2.0
+large_divergence_max_fraction = 0.01
+monotone_slack = 1e-6
+
+[decision_gate]
+# Frozen primary cell: renormalize + mass-omission at headline m = 0.125.
+headline_policy = "renormalize"
+headline_positioning = "mass_omission"
+headline_m = 0.125
+max_mean_forward_kl = 0.05
+min_top1_agreement = 0.99
+max_ppl_ratio = 1.05
+monotone_slack = 1e-6
+# Kill signal: sub-1% mass causing frequent large divergence.
+large_divergence_kl = 2.0
+large_divergence_max_fraction = 0.01

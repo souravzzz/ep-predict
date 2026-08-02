@@ -305,6 +305,68 @@ def _audit_artifacts(args: argparse.Namespace) -> int:
     return 0 if report["state"] == "complete" else 1
 
 
+def _measure_q1(args: argparse.Namespace) -> int:
+    from ep_predict.hardware.q1 import measure_q1
+
+    result = measure_q1(
+        load_toml(args.model_config),
+        load_toml(args.experiment_config),
+        limit=args.limit,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _analyze_q1(args: argparse.Namespace) -> int:
+    from ep_predict.analysis.q1 import analyze_q1
+
+    summary = analyze_q1(load_toml(args.config))
+    print(json.dumps(summary["gate"], indent=2, sort_keys=True))
+    return 0
+
+
+def _plot_q1(args: argparse.Namespace) -> int:
+    from ep_predict.visualize.q1 import plot_q1
+
+    manifest = plot_q1(
+        load_toml(args.config),
+        output_dir=args.output,
+    )
+    print(json.dumps(manifest, indent=2, sort_keys=True))
+    return 0
+
+
+def _measure_q1_tail(args: argparse.Namespace) -> int:
+    from ep_predict.hardware.q1 import measure_q1_tail
+
+    result = measure_q1_tail(
+        load_toml(args.model_config),
+        load_toml(args.experiment_config),
+        limit=args.limit,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def _analyze_q1_tail(args: argparse.Namespace) -> int:
+    from ep_predict.analysis.q1 import analyze_q1_tail
+
+    summary = analyze_q1_tail(load_toml(args.config))
+    print(json.dumps(summary["gate"], indent=2, sort_keys=True))
+    return 0
+
+
+def _plot_q1_tail(args: argparse.Namespace) -> int:
+    from ep_predict.visualize.q1 import plot_q1_tail
+
+    manifest = plot_q1_tail(
+        load_toml(args.config),
+        output_dir=args.output,
+    )
+    print(json.dumps(manifest, indent=2, sort_keys=True))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ep-predict",
@@ -532,6 +594,66 @@ def build_parser() -> argparse.ArgumentParser:
     degradation_plot_parser.add_argument("--config", required=True, type=Path)
     degradation_plot_parser.add_argument("--output", type=Path)
     degradation_plot_parser.set_defaults(function=_plot_deadline_degradation)
+
+    q1_measure_parser = subparsers.add_parser(
+        "measure-q1",
+        help="run Q1 paired clean-vs-erased forward passes on the base model",
+    )
+    q1_measure_parser.add_argument("--model-config", required=True, type=Path)
+    q1_measure_parser.add_argument(
+        "--experiment-config", required=True, type=Path
+    )
+    q1_measure_parser.add_argument(
+        "--limit",
+        type=int,
+        help="process only the first N token chunks for a smoke test",
+    )
+    q1_measure_parser.set_defaults(function=_measure_q1)
+
+    q1_parser = subparsers.add_parser(
+        "analyze-q1",
+        help="apply the frozen Q1 gate and aggregate erasure scans",
+    )
+    q1_parser.add_argument("--config", required=True, type=Path)
+    q1_parser.set_defaults(function=_analyze_q1)
+
+    q1_plot_parser = subparsers.add_parser(
+        "plot-q1",
+        help="generate the Q1 quality-vs-mass and positioning figures",
+    )
+    q1_plot_parser.add_argument("--config", required=True, type=Path)
+    q1_plot_parser.add_argument("--output", type=Path)
+    q1_plot_parser.set_defaults(function=_plot_q1)
+
+    q1_tail_measure_parser = subparsers.add_parser(
+        "measure-q1-tail",
+        help="run the AX4-faithful Q1 tail-erasure sweep on the base model",
+    )
+    q1_tail_measure_parser.add_argument("--model-config", required=True, type=Path)
+    q1_tail_measure_parser.add_argument(
+        "--experiment-config", required=True, type=Path
+    )
+    q1_tail_measure_parser.add_argument(
+        "--limit",
+        type=int,
+        help="process only the first N token chunks for a smoke test",
+    )
+    q1_tail_measure_parser.set_defaults(function=_measure_q1_tail)
+
+    q1_tail_parser = subparsers.add_parser(
+        "analyze-q1-tail",
+        help="apply the frozen Q1 tail gate and aggregate the tail sweep",
+    )
+    q1_tail_parser.add_argument("--config", required=True, type=Path)
+    q1_tail_parser.set_defaults(function=_analyze_q1_tail)
+
+    q1_tail_plot_parser = subparsers.add_parser(
+        "plot-q1-tail",
+        help="generate the Q1 tail-event incidence/compounding figures",
+    )
+    q1_tail_plot_parser.add_argument("--config", required=True, type=Path)
+    q1_tail_plot_parser.add_argument("--output", type=Path)
+    q1_tail_plot_parser.set_defaults(function=_plot_q1_tail)
 
     audit_parser = subparsers.add_parser(
         "audit-artifacts",

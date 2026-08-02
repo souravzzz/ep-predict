@@ -18,6 +18,83 @@ The immutable run manifest and metrics remain the source of truth.
 
 ## Runs
 
+### `q1-quality-erasure` (tail-event sub-track) — 2026-08-02
+
+- Hypothesis: Q1-tail — does the frozen model tolerate *rare* expert erasure,
+  treated as a tail event with the incidence/breadth AX4's deadline contract
+  actually assumes, rather than the universal every-token/every-layer erasure
+  of the mass-budget headline?
+- Question: Conditional on the tokens that suffer a one-expert one-layer drop,
+  how much quality is lost, and does it grow monotonically with the fraction
+  of tokens exposed (incidence) and with consecutive-layer compounding?
+- Config: `configs/experiment/q1-quality-erasure.toml` `[tail_probe]` /
+  `[tail_gate]`; fold into the `q1-quality-erasure` run.
+- Trace/run artifact: `artifacts/runs/q1-quality-erasure/analysis/q1_tail/`;
+  15,872 measured tokens, incidence swept {0.002..0.30}, run lengths {1,2,4,8},
+  both policies, AX4 anchor at 0.009. Measured paired forward passes on the
+  frozen base checkpoint.
+- Result: Stop signal `False` (monotone in incidence, no frequent
+  large-divergence kill), but the frozen conditional gate reads `STOP` under
+  renormalize: conditional-on-affected mean KL 0.128 (gate ≤0.05), top-1
+  agreement 86.4% (gate ≥99%), PPL ratio 1.13 (gate ≤1.05). These are ~45x
+  lower than the universal mass-budget headline (KL 5.81), confirming erasure
+  treated as a rare tail is far less destructive. Under **null** (drop one
+  low-mass expert, no renormalization) the same cell is essentially free:
+  conditional KL 0.0032, top-1 99.2% — the reverse of the mass-budget ordering.
+- Integrity checks: exact-expert tail patch (no-op when inactive, only
+  affected tokens change); per-chunk decorrelated seeded affected sampling;
+  fingerprint-pinned config; paired same-token deltas; `audit-artifacts`
+  `complete` (255 durable files).
+- Decision: STOP under the frozen renormalize threshold, but AX4's main
+  erasure is a bounded low-mass tail and appears largely tolerable under the
+  model's native null-drop semantics. Robustness training (Q2) remains the
+  gated next step but with a materially lighter burden than the mass-budget
+  headline implied.
+- Figures: `fig_tail_q1_incidence_compounding` (incidence + run-length panels)
+  under `analysis/q1_tail/figures_tail/`, hashed in `figure_manifest.json`.
+- Human visual review: NOT completed by the CLI model (no vision); checklist
+  open in `FIGURES.md`.
+- One next action: human reviews the tail figures, then decide whether Q1's
+  decisive cell should be the AX4-anchored tail (null-drop) rather than the
+  universal renormalize mass sweep before authorizing Q2.
+
+### `q1-quality-erasure` — 2026-08-02
+
+- Hypothesis: Q1 — on the frozen base model, expert-erasure quality cost is
+  controlled by missing routed mass `m_missing` (AX4's assumed-robustness
+  contract), or by which/where experts are lost.
+- Question: Is quality loss modest, smooth, and monotone in missing routed
+  mass, or does even sub-1% mass cause frequent large divergence?
+- Config: `configs/experiment/q1-quality-erasure.toml`; protocol in
+  `docs/Q1_PROTOCOL.md`.
+- Trace/run artifact: `artifacts/runs/q1-quality-erasure`; 4096-token
+  WikiText-2 budget, 5 mass targets × 3 positionings × 2 policies, plus
+  layer/token-burst correlation topologies. Everything is a measured paired
+  forward pass on the frozen OLMoE-1B-7B-0125-Instruct checkpoint.
+- Result: **STOP**. Headline renormalize + mass-omission at m=0.125 (realized
+  0.1794) over 3584 tokens: mean forward-KL 5.8141 (gate ≤0.05), top-1
+  agreement 9.18% (gate ≥99%), PPL ratio 279.9 (gate ≤1.05), non-monotone.
+  Even at the lowest realized missing mass (0.082, target m=0.01) 89.5% of
+  tokens exceed KL≥2 — the frozen kill signal. The model does not tolerate
+  bounded low-mass expert erasure.
+- Integrity checks: runtime MoE-forward patch reproduces softmax-64 → top-8 →
+  no-renormalization; semantic smoke confirms no-op when inactive and real
+  mass erased under the headline cell (max logits delta >1e-4);
+  fingerprint-pinned config; paired same-token deltas; `audit-artifacts`
+  state `complete` with zero errors and zero warnings.
+- Decision: STOP — AX4's deadline-erasure quality contract is not viable on
+  the frozen model without availability-conditioned robustness training. The
+  renormalize-vs-null gap is material, so the cost is largely intrinsic, not
+  policy-recoverable by the null/renormalize contrast alone.
+- Figures: two PDF/PNG figures under
+  `artifacts/runs/q1-quality-erasure/analysis/q1/figures`; input hashes in
+  `figure_manifest.json`.
+- Human visual review: NOT completed by the CLI model (no vision); the
+  `human_review_complete` flag is `false` and the fig1/fig2 checklist is open.
+- One next action: a human reviews fig1/fig2, then either narrows/rejects the
+  erasure-robustness target for AX4 or authorizes Q2
+  availability-conditioned robustness training as the gated follow-up.
+
 ### `h1-standard-small-dataset` — 2026-07-31
 
 - Hypothesis: H1 preparation.

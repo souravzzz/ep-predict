@@ -1,0 +1,60 @@
+{
+  "config_fingerprint": "adabff1ff4ee9d71150bc811d64011abb8d8208aaf29fe50bab6c04772a9822d",
+  "experiment_config": {
+    "decision_gate": {
+      "headline_m": 0.125,
+      "headline_policy": "renormalize",
+      "headline_positioning": "mass_omission",
+      "large_divergence_kl": 2.0,
+      "large_divergence_max_fraction": 0.01,
+      "max_mean_forward_kl": 0.05,
+      "max_ppl_ratio": 1.05,
+      "min_top1_agreement": 0.99,
+      "monotone_slack": 1e-06
+    },
+    "decode_leg": {
+      "enabled": true,
+      "max_new_tokens": 24,
+      "prefix_tokens": 64
+    },
+    "output_dir": "artifacts/runs/q1-quality-erasure/analysis/q1",
+    "probe": {
+      "chunk_size": 512,
+      "mass_targets": [
+        0.01,
+        0.05,
+        0.125,
+        0.25,
+        0.5
+      ],
+      "policies": [
+        "renormalize",
+        "null"
+      ],
+      "positionings": [
+        "mass_omission",
+        "random_within_route",
+        "mass_adversarial"
+      ],
+      "token_budget": 4096
+    },
+    "run_dir": "artifacts/runs/q1-quality-erasure",
+    "run_id": "q1-quality-erasure",
+    "seed": 7
+  },
+  "model_config": {
+    "attention_implementation": "sdpa",
+    "device": "cuda:0",
+    "dtype": "bfloat16",
+    "model_id": "allenai/OLMoE-1B-7B-0125",
+    "revision": "9b0c1aa87e34a20052389dce1f0cf01da783f654",
+    "router_name_contains": [
+      ".mlp.gate"
+    ],
+    "tokenizer_id": "allenai/OLMoE-1B-7B-0125",
+    "tokenizer_revision": "9b0c1aa87e34a20052389dce1f0cf01da783f654",
+    "trust_remote_code": false,
+    "use_cache": true
+  },
+  "semantics": "softmax_64_top8_no_renormalization_runtime_patch"
+}

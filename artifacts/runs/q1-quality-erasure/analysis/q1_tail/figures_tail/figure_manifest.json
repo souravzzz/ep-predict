@@ -1,0 +1,14 @@
+{
+  "analysis": "q1_tail",
+  "decision": "STOP",
+  "human_review_complete": false,
+  "inputs": {
+    "artifacts/runs/q1-quality-erasure/analysis/q1_tail/tail_gate.json": "854a923346d14b6e913ff11fd05740cda9b3bfc8cf4f5ab93c3bc31aa549af78",
+    "artifacts/runs/q1-quality-erasure/analysis/q1_tail/tail_sweep.csv": "aba924600e908b908e4e98669725e5deb8357ad9293d4436d4f7c7f68583db8f"
+  },
+  "outputs": {
+    "artifacts/runs/q1-quality-erasure/analysis/q1_tail/figures_tail/FIGURES.md": "c5e989d7ff0e4a42f6253fb8770c74a0b606c928dfa9183ebe788087fe5982b5",
+    "artifacts/runs/q1-quality-erasure/analysis/q1_tail/figures_tail/fig_tail_q1_incidence_compounding.pdf": "d8ccd918e1e88f97cee85ea66167e2753de85bd298ad9d137a9a96b0eb204d2d",
+    "artifacts/runs/q1-quality-erasure/analysis/q1_tail/figures_tail/fig_tail_q1_incidence_compounding.png": "ce6ab7d96cee0162c3f87db206e1e51663d563deec881a29cc6938fa90488503"
+  }
+}

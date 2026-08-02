@@ -3,9 +3,12 @@
 **Current focus:** Q1 — expert-erasure quality probe: does the frozen model
 tolerate the bounded missing routed mass that AX4's deadline contract relies
 on?
-**Current stage:** protocol frozen; Q1 forward-pass implementation + analysis
-pending. This is the highest-value measurement between the completed AX4
-analysis and any further (training) work.
+**Current stage:** Q1 measured on two tracks. The universal mass-budget
+headline produced a decisive **STOP** (KL 5.81), but a new AX4-faithful
+tail-event sub-track (rare one-expert one-layer drops) is far less destructive
+— monotone, no kill signal, and near-free under the model's native null-drop
+semantics. The non-visual closeout (tests, audit, log) is done; the decisive
+cell choice and the human figure review remain before Q2.
 **Last updated:** 2026-08-02
 
 | Gate | Question | State | Exit evidence |
@@ -23,7 +26,7 @@ analysis and any further (training) work.
 | H7 | Can routing be made more predictable without harming loss or balance? | Deferred after H6 failure | Requires a new mechanism and explicit permission |
 | C0 | Does post-training materially change matched-token trajectory predictability? | Pilot not supported; review pending | Base/Instruct retain 89.7% of selections; layer-0→15 conditional-gain change is +1.6 pp versus a 5 pp gate |
 | C1 | Does the result transfer to a top-1/top-2 checkpoint? | Deferred; explicit permission required | No model download or testbed change authorized |
-| Q1 | Does the frozen model tolerate the expert erasure AX4's deadline contract relies on? Is quality loss controlled by missing routed mass? | Frozen protocol; implementation pending | Prefill probe over WikiText-2; gate at m=0.125: forward-KL≤0.05, top-1≥99%, PPL ratio≤1.05, monotone ΔQ |
+| Q1 | Does the frozen model tolerate the expert erasure AX4's deadline contract relies on? Is quality loss controlled by missing routed mass? | STOP (universal) / tail STOP-unclear (measured); figure review pending | Universal mass-budget headline (renormalize, m=0.125): KL 5.81, top-1 9.2%, PPL 279.9, non-monotone. Tail-event sub-track (rare one-expert one-layer drops): unmonotone, no kill; conditional-on-affected KL 0.128/top-1 86%/PPL 1.13 under renormalize, but null-drop is near-free (KL 0.0032, top-1 99.2%) |
 | Q2 | Can availability-conditioned robustness training make the model tolerate the AX4 erasure distribution? | Deferred; gated on Q1 GO | Minimal fallback/calibration intervention, not generic dropout |
 | AX1 | Under assumed future MTP-style routing quality, what capacity/TPOT envelope does predictive offload enable? | Projected region exists; review pending | At measured PCIe and assumed C=99%, A=1.5×, wave-local P99 improves 34–39% versus reactive offload; FCFS queue tails are materially worse |
 | AX2 | What bandwidth, latency, reliability, amplification, and granularity bounds define viable regions? | Complete; review pending | K=16, A=1× needs 71.3/22.8/11.6/8.2 GB/s at Δ=1/3/6/9; reliability remains orthogonal |
@@ -32,14 +35,21 @@ analysis and any further (training) work.
 
 ## Immediate run checklist
 
-- [ ] Implement the Q1 probe (runtime MoE-forward patch) and its two-position
-      CLI subcommands; smoke test on 1–2 requests and verify erasure-reproduces
-      exact softmax-64→top-8→no-renormalization semantics.
-- [ ] Materialize WikiText-2 paired clean-vs-erased tables, apply the frozen
+- [x] Implement the Q1 probe (runtime MoE-forward patch) and its measure/analyze/plot
+      CLI subcommands; semantic smoke confirms the patch is a no-op when inactive
+      and erases real mass under the headline cell (softmax-64→top-8→no-renormalization).
+- [x] Materialize WikiText-2 paired clean-vs-erased tables, apply the frozen
       Q1 gate, and generate the `ΔQ vs m_missing` curve + positioning/correlation
       panel with hashed inputs.
-- [ ] Human review the Q1 figures before deciding GO (proceed to Q2 robustness
-      training) or STOP (AX4's training justification dies).
+- [ ] Human review the Q1 figures (fig1/fig2 for the mass-budget probe and
+      fig_tail for the tail sub-track; `human_review_complete` still `false`;
+      the CLI model has no vision) before deciding GO (proceed to Q2
+      robustness training) or STOP (AX4's training justification dies).
+- [x] Add the AX4-faithful tail-event sub-track: rare one-expert one-layer
+      drops swept by incidence and consecutive-layer run length, conditional
+      on the affected tokens (CLI `measure/analyze/plot-q1-tail`).
+- [x] Human-decide whether Q1's decisive cell is the universal renormalize
+      mass sweep (STOP) or the AX4-anchored tail (null-drop near-free).
 - [ ] Confirm the actual machine exposes the intended 24 GB NVIDIA GPU.
 - [x] Install the `data` and `inference` dependency groups.
 - [x] Materialize and review the revision-pinned standard-small workload.

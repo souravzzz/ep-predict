@@ -1,0 +1,92 @@
+{
+  "analysis_dir": "artifacts/runs/q1-quality-erasure/analysis/q1",
+  "decision": "STOP",
+  "gate": {
+    "decision": "STOP",
+    "hypothesis": "Q1",
+    "kill_signal": {
+      "frequent_large_divergence_at_lowest_mass": true,
+      "lowest_mass": 0.08176531110491071,
+      "lowest_mass_large_divergence_fraction": 0.8953683035714286
+    },
+    "monotonicity": {
+      "kl_by_realized_mass": [
+        {
+          "mean_forward_kl": 4.934801987239292,
+          "perplexity_ratio": 103.64933446998141,
+          "realized_missing_mass": 0.08176531110491071,
+          "target_m": 0.01,
+          "top1_agreement": 0.13364955357142858
+        },
+        {
+          "mean_forward_kl": 4.880351747785296,
+          "perplexity_ratio": 99.54014935169695,
+          "realized_missing_mass": 0.08468191964285714,
+          "target_m": 0.05,
+          "top1_agreement": 0.13504464285714285
+        },
+        {
+          "mean_forward_kl": 5.814132417951312,
+          "perplexity_ratio": 279.89250337751287,
+          "realized_missing_mass": 0.17941720145089285,
+          "target_m": 0.125,
+          "top1_agreement": 0.091796875
+        },
+        {
+          "mean_forward_kl": 6.732760225023542,
+          "perplexity_ratio": 625.3854528662199,
+          "realized_missing_mass": 0.30433872767857145,
+          "target_m": 0.25,
+          "top1_agreement": 0.06501116071428571
+        },
+        {
+          "mean_forward_kl": 8.84782886505127,
+          "perplexity_ratio": 5154.140147677938,
+          "realized_missing_mass": 0.5675571986607143,
+          "target_m": 0.5,
+          "top1_agreement": 0.017578125
+        }
+      ],
+      "monotone_non_decreasing": false,
+      "slack": 1e-06
+    },
+    "primary": {
+      "mean_forward_kl": 5.814132417951312,
+      "perplexity_ratio": 279.89250337751287,
+      "realized_missing_mass": 0.17941720145089285,
+      "tokens": 3584,
+      "top1_agreement": 0.091796875
+    },
+    "primary_scope": {
+      "m_missing": 0.125,
+      "policy": "renormalize",
+      "positioning": "mass_omission",
+      "topology": "spread"
+    },
+    "stop_triggered": true,
+    "thresholds": {
+      "large_divergence_kl": 2.0,
+      "large_divergence_max_fraction": 0.01,
+      "max_mean_forward_kl": 0.05,
+      "max_ppl_ratio": 1.05,
+      "min_top1_agreement": 0.99,
+      "monotone_required": true
+    }
+  },
+  "headline_row": {
+    "experts_erased_mean": "2.1226109095982144",
+    "large_divergence_fraction": "0.935546875",
+    "mean_forward_kl": "5.814132417951312",
+    "mean_nll_clean": "2.5364792006356374",
+    "mean_nll_erased": "8.170884813581194",
+    "perplexity_ratio": "279.89250337751287",
+    "policy": "renormalize",
+    "positioning": "mass_omission",
+    "realized_missing_mass_mean": "0.17941720145089285",
+    "target_m": "0.125",
+    "tokens": "3584",
+    "top1_agreement": "0.091796875",
+    "topology": "spread"
+  },
+  "hypothesis": "Q1"
+}
